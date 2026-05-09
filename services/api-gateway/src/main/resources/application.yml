@@ -29,7 +29,7 @@ spring:
             - StripPrefix=0
 
 jwt:
-  secret: change-this-to-a-256-bit-secret
+  secret: dev-secret-replace-in-production
 
 management:
   endpoints:
