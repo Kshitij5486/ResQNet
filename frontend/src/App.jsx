@@ -24,6 +24,9 @@ function App() {
         <Route index element={<Dashboard />} />
         <Route path="incidents" element={<Incidents />} />
         <Route path="responders" element={<Responders />} />
+        <Route path="map" element={<div className="text-white p-4">Live Map — Day 10</div>} />
+        <Route path="monitoring" element={<div className="text-white p-4">Kafka Monitor — Day 12</div>} />
+        <Route path="health" element={<div className="text-white p-4">Service Health — Day 13</div>} />
       </Route>
     </Routes>
   )
