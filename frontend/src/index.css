@@ -25,3 +25,40 @@ body {
 @keyframes ping {
   75%, 100% { transform: scale(1.8); opacity: 0; }
 }
+/* Page transitions */
+main > * {
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+
+/* Leaflet popup fix */
+.leaflet-popup-content-wrapper {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+.leaflet-popup-content { margin: 0 !important; }
+.leaflet-popup-tip { background: #1e2d45 !important; }
+.leaflet-container { background: #0a0f1e !important; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #1e2d45; border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: #3b82f6; }
+
+/* Select element */
+select option {
+  background: #111827;
+  color: #e2e8f0;
+}
+
+/* Pulse ring animation */
+@keyframes ping {
+  75%, 100% { transform: scale(1.8); opacity: 0; }
+}

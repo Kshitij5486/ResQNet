@@ -6,14 +6,15 @@ import {
 } from 'lucide-react'
 import useAuthStore from '../../store/authStore'
 import toast from 'react-hot-toast'
+import RealtimeStatusBar from '../ui/RealtimeStatusBar'
 
 const navItems = [
-  { to: '/',           icon: LayoutDashboard, label: 'Dashboard',      end: true },
-  { to: '/incidents',  icon: AlertTriangle,   label: 'Incidents'               },
-  { to: '/responders', icon: Users,           label: 'Responders'              },
-  { to: '/map',        icon: Map,             label: 'Live Map'                },
-  { to: '/monitoring', icon: Activity,        label: 'Kafka Monitor'           },
-  { to: '/health',     icon: Shield,          label: 'Service Health'          },
+  { to: '/',           icon: LayoutDashboard, label: 'Dashboard',     end: true },
+  { to: '/incidents',  icon: AlertTriangle,   label: 'Incidents'              },
+  { to: '/responders', icon: Users,           label: 'Responders'             },
+  { to: '/map',        icon: Map,             label: 'Live Map'               },
+  { to: '/monitoring', icon: Activity,        label: 'Kafka Monitor'          },
+  { to: '/health',     icon: Shield,          label: 'Service Health'         },
 ]
 
 export default function Layout() {
@@ -29,10 +30,8 @@ export default function Layout() {
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
-
       {/* Sidebar */}
       <aside className="w-60 bg-surface border-r border-border flex flex-col flex-shrink-0">
-        {/* Logo */}
         <div className="px-5 py-5 border-b border-border">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-accent bg-opacity-15 rounded-lg flex items-center justify-center border border-accent border-opacity-20">
@@ -45,14 +44,10 @@ export default function Layout() {
           </div>
         </div>
 
-        {/* Nav */}
         <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
           <p className="text-xs font-semibold text-muted uppercase tracking-wider px-3 mb-3">Navigation</p>
           {navItems.map(({ to, icon: Icon, label, end }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={end}
+            <NavLink key={to} to={to} end={end}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all group ${
                   isActive
@@ -72,7 +67,6 @@ export default function Layout() {
           ))}
         </nav>
 
-        {/* User + Logout */}
         <div className="px-3 py-4 border-t border-border">
           <div className="flex items-center gap-3 px-3 py-2.5 mb-1">
             <div className="w-7 h-7 rounded-full bg-accent bg-opacity-20 flex items-center justify-center text-xs font-bold text-accent flex-shrink-0">K</div>
@@ -81,19 +75,15 @@ export default function Layout() {
               <p className="text-muted text-xs">Operator</p>
             </div>
           </div>
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-muted hover:text-danger hover:bg-danger hover:bg-opacity-10 transition-all"
-          >
-            <LogOut className="w-4 h-4" />
-            Sign out
+          <button onClick={handleLogout}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-muted hover:text-danger hover:bg-danger hover:bg-opacity-10 transition-all">
+            <LogOut className="w-4 h-4" />Sign out
           </button>
         </div>
       </aside>
 
       {/* Main */}
       <div className="flex-1 flex flex-col overflow-hidden">
-
         {/* Topbar */}
         <header className="h-14 bg-surface border-b border-border flex items-center justify-between px-6 flex-shrink-0">
           <div>
@@ -105,17 +95,12 @@ export default function Layout() {
               <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
               <span className="text-success text-xs font-medium">All Systems Operational</span>
             </div>
-
-            {/* Notification Bell */}
             <div className="relative">
-              <button
-                onClick={() => setShowNotif(!showNotif)}
-                className="relative w-8 h-8 flex items-center justify-center rounded-lg bg-subtle border border-border text-muted hover:text-white hover:border-accent hover:border-opacity-40 transition-all"
-              >
+              <button onClick={() => setShowNotif(!showNotif)}
+                className="relative w-8 h-8 flex items-center justify-center rounded-lg bg-subtle border border-border text-muted hover:text-white hover:border-accent hover:border-opacity-40 transition-all">
                 <Bell className="w-4 h-4" />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-danger rounded-full border border-surface" />
+                <span className="absolute top-1 right-1 w-2 h-2 bg-danger rounded-full border-2 border-surface" />
               </button>
-
               {showNotif && (
                 <div className="absolute right-0 top-10 w-72 bg-card border border-border rounded-xl shadow-2xl z-50">
                   <div className="flex items-center justify-between px-4 py-3 border-b border-border">
@@ -126,17 +111,24 @@ export default function Layout() {
                   </div>
                   <div className="p-3 space-y-2">
                     <div className="flex items-start gap-3 p-2.5 rounded-lg bg-subtle">
-                      <div className="w-2 h-2 rounded-full bg-success mt-1 flex-shrink-0" />
+                      <div className="w-2 h-2 rounded-full bg-success mt-1.5 flex-shrink-0" />
                       <div>
                         <p className="text-xs font-medium text-white">All systems operational</p>
                         <p className="text-xs text-muted mt-0.5">Kafka pipeline healthy · Lag: 0</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3 p-2.5 rounded-lg bg-subtle">
-                      <div className="w-2 h-2 rounded-full bg-accent mt-1 flex-shrink-0" />
+                      <div className="w-2 h-2 rounded-full bg-accent mt-1.5 flex-shrink-0" />
                       <div>
                         <p className="text-xs font-medium text-white">ResQNet v1.0.0 running</p>
                         <p className="text-xs text-muted mt-0.5">4 services · 21 responders active</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3 p-2.5 rounded-lg bg-subtle">
+                      <div className="w-2 h-2 rounded-full bg-warning mt-1.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-xs font-medium text-white">Mumbai responders busy</p>
+                        <p className="text-xs text-muted mt-0.5">All 5 Mumbai units on duty</p>
                       </div>
                     </div>
                   </div>
@@ -148,6 +140,9 @@ export default function Layout() {
             </div>
           </div>
         </header>
+
+        {/* Real-time status bar */}
+        <RealtimeStatusBar />
 
         {/* Page content */}
         <main className="flex-1 overflow-auto p-6 bg-background">
