@@ -26,7 +26,7 @@ function StatCard({ title, value, subtitle, icon: Icon, color, loading }) {
         </div>
       ) : (
         <>
-          <p className="text-3xl font-bold text-white mb-1">{value ?? 'â€”'}</p>
+          <p className="text-3xl font-bold text-white mb-1">{value ?? 'Ã¢â‚¬â€'}</p>
           <p className="text-sm font-medium text-slate-300">{title}</p>
           {subtitle && <p className="text-xs text-muted mt-1">{subtitle}</p>}
         </>
@@ -203,7 +203,7 @@ export default function Dashboard() {
             {kafkaHealth?.consumerGroups?.map(g => (
               <div key={g.groupId} className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-medium text-slate-300 truncate max-w-32">{g.groupId}</p>
+                  <p className="text-xs font-medium text-slate-300">{g.groupId.replace("dispatch-service-group", "dispatch-svc").replace("dispatch-dlt-group", "dispatch-dlt")}</p>
                   <p className="text-xs text-muted">Lag: {g.totalLag}</p>
                 </div>
                 <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
