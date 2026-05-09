@@ -1,8 +1,10 @@
 server:
   port: 8083
+
 spring:
   application:
     name: dispatch-service
+
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://127.0.0.1:5432/emergency_db}
     username: ${SPRING_DATASOURCE_USERNAME:emergency_user}
@@ -11,6 +13,7 @@ spring:
       maximum-pool-size: 10
       pool-name: DispatchServicePool
       connection-timeout: 5000
+
   jpa:
     hibernate:
       ddl-auto: none
@@ -18,11 +21,13 @@ spring:
       hibernate:
         default_schema: dispatch
         dialect: org.hibernate.dialect.PostgreSQLDialect
+
   flyway:
     enabled: true
     schemas: dispatch
     locations: classpath:db/migration
     validate-on-migrate: true
+
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     consumer:
@@ -34,19 +39,29 @@ spring:
         spring.json.trusted.packages: "com.emergency.*"
         spring.json.use.type.headers: false
         spring.json.value.default.type: com.emergency.dispatchservice.event.EmergencyCreatedEvent
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all
+      retries: 3
+
   data:
     redis:
       host: ${REDIS_HOST:127.0.0.1}
       port: ${REDIS_PORT:6379}
       timeout: 2000ms
+
 dispatch:
   max-candidates: 3
   max-search-radius-km: 50
+
 management:
   endpoints:
     web:
       exposure:
         include: health,info,metrics
+
 logging:
   level:
     com.emergency: DEBUG
+    org.springframework.kafka: INFO
