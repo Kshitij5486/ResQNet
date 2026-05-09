@@ -59,48 +59,35 @@ public class DispatchService {
 
             log.info("Assigning responder {} ({}) to incident {} distance: {} km",
                     responder.getName(), responder.getType(),
-                    event.getIncidentId(),
-                    String.format("%.2f", distance));
+                    event.getIncidentId(), String.format("%.2f", distance));
 
             responderRepository.updateStatusAndIncident(
-                    responder.getId().toString(),
-                    "BUSY",
-                    event.getIncidentId()
-            );
+                    responder.getId().toString(), "BUSY", event.getIncidentId());
+
+            DispatchAssignedEvent dispatchEvent = new DispatchAssignedEvent(
+                    event.getIncidentId(), responder.getId(),
+                    responder.getName(), responder.getType(),
+                    responder.getLatitude(), responder.getLongitude(),
+                    distance, Instant.now());
+
+            eventPublisher.publishDispatchAssigned(dispatchEvent);
 
             log.info("Dispatch complete: responder={}, incident={}, distance={}km",
                     responder.getId(), event.getIncidentId(),
                     String.format("%.2f", distance));
-
-            DispatchAssignedEvent dispatchEvent = new DispatchAssignedEvent(
-                    event.getIncidentId(),
-                    responder.getId(),
-                    responder.getName(),
-                    responder.getType(),
-                    responder.getLatitude(),
-                    responder.getLongitude(),
-                    distance,
-                    Instant.now()
-            );
-
-            eventPublisher.publishDispatchAssigned(dispatchEvent);
         });
     }
 
     @Transactional(readOnly = true)
     public List<ResponderResponse> getAvailableResponders(String city) {
         return responderRepository.findAvailableByCity(city)
-                .stream()
-                .map(this::toResponse)
-                .collect(Collectors.toList());
+                .stream().map(this::toResponse).collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
     public List<ResponderResponse> getAllResponders(String city) {
         return responderRepository.findByCityAndStatus(city, "AVAILABLE")
-                .stream()
-                .map(this::toResponse)
-                .collect(Collectors.toList());
+                .stream().map(this::toResponse).collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
@@ -112,41 +99,38 @@ public class DispatchService {
 
     @Transactional
     public ResponderResponse updateLocation(UUID id, UpdateLocationRequest request) {
+        responderRepository.updateLocation(
+                id.toString(), request.latitude(), request.longitude(), Instant.now());
         Responder responder = responderRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Responder not found: " + id));
-        responder.setLatitude(request.latitude());
-        responder.setLongitude(request.longitude());
-        responder.setLastPingAt(Instant.now());
-        responderRepository.save(responder);
-        log.info("Location updated for responder {}: {}, {}",
-                id, request.latitude(), request.longitude());
+        log.info("Location updated for responder {}: {}, {}", id, request.latitude(), request.longitude());
+        return toResponse(responder);
+    }
+
+    @Transactional
+    public ResponderResponse pingLocation(UUID id, UpdateLocationRequest request) {
+        responderRepository.updateLocation(
+                id.toString(), request.latitude(), request.longitude(), Instant.now());
+        Responder responder = responderRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Responder not found: " + id));
+        log.debug("Ping from responder {}: lat={}, lon={}", id, request.latitude(), request.longitude());
         return toResponse(responder);
     }
 
     private ResponderResponse toResponse(Responder r) {
         return new ResponderResponse(
-                r.getId().toString(),
-                r.getName(),
-                r.getType(),
-                r.getStatus(),
-                r.getPhoneNumber(),
-                r.getVehicleId(),
-                r.getLatitude(),
-                r.getLongitude(),
+                r.getId().toString(), r.getName(), r.getType(), r.getStatus(),
+                r.getPhoneNumber(), r.getVehicleId(), r.getLatitude(), r.getLongitude(),
                 r.getCity(),
-                r.getCurrentIncidentId() != null ? r.getCurrentIncidentId().toString() : null
-        );
+                r.getCurrentIncidentId() != null ? r.getCurrentIncidentId().toString() : null);
     }
 
-    public double haversineDistance(double lat1, double lon1,
-                                     double lat2, double lon2) {
+    public double haversineDistance(double lat1, double lon1, double lat2, double lon2) {
         double dLat = Math.toRadians(lat2 - lat1);
         double dLon = Math.toRadians(lon2 - lon1);
         double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
-                + Math.cos(Math.toRadians(lat1))
-                * Math.cos(Math.toRadians(lat2))
+                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
                 * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return EARTH_RADIUS_KM * c;
+        return EARTH_RADIUS_KM * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     }
 }

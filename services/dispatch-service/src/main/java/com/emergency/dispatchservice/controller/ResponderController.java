@@ -43,12 +43,26 @@ public class ResponderController {
         return ResponseEntity.ok(dispatchService.updateLocation(id, request));
     }
 
+    @PostMapping("/{id}/ping")
+    public ResponseEntity<Map<String, Object>> ping(
+            @PathVariable UUID id,
+            @Valid @RequestBody UpdateLocationRequest request) {
+        ResponderResponse updated = dispatchService.pingLocation(id, request);
+        return ResponseEntity.ok(Map.of(
+                "responderId", updated.id(),
+                "latitude", updated.latitude(),
+                "longitude", updated.longitude(),
+                "status", updated.status(),
+                "message", "Location updated successfully"
+        ));
+    }
+
     @GetMapping("/health")
     public ResponseEntity<Map<String, Object>> health() {
         return ResponseEntity.ok(Map.of(
-            "service", "dispatch-service",
-            "status", "UP",
-            "version", "1.0.0"
+                "service", "dispatch-service",
+                "status", "UP",
+                "version", "1.0.0"
         ));
     }
 }
