@@ -83,7 +83,7 @@ public class IncidentService {
 
     @Transactional(readOnly = true)
     public List<IncidentResponse> getMyIncidents(UUID reporterId) {
-        return incidentRepository.findByReporterId(reporterId)
+        return incidentRepository.findByReporterId(reporterId.toString())
                 .stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());

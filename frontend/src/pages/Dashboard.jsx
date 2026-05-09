@@ -26,7 +26,7 @@ function StatCard({ title, value, subtitle, icon: Icon, color, loading }) {
         </div>
       ) : (
         <>
-          <p className="text-3xl font-bold text-white mb-1">{value ?? '—'}</p>
+          <p className="text-3xl font-bold text-white mb-1">{value ?? 'â€”'}</p>
           <p className="text-sm font-medium text-slate-300">{title}</p>
           {subtitle && <p className="text-xs text-muted mt-1">{subtitle}</p>}
         </>
@@ -98,7 +98,7 @@ export default function Dashboard() {
 
   const { data: incidents, isLoading: incLoading } = useQuery({
     queryKey: ['incidents'],
-    queryFn: () => api.get('/api/incidents').then(r => r.data),
+    queryFn: () => api.get('/api/incidents/my').then(r => r.data),
     refetchInterval: 5000,
   })
 
