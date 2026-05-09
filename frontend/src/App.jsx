@@ -4,6 +4,7 @@ import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
 import Incidents from './pages/Incidents'
 import Responders from './pages/Responders'
+import LiveMap from './pages/LiveMap'
 import Layout from './components/layout/Layout'
 
 function ProtectedRoute({ children }) {
@@ -24,9 +25,9 @@ function App() {
         <Route index element={<Dashboard />} />
         <Route path="incidents" element={<Incidents />} />
         <Route path="responders" element={<Responders />} />
-        <Route path="map" element={<div className="text-white p-4">Live Map — Day 10</div>} />
-        <Route path="monitoring" element={<div className="text-white p-4">Kafka Monitor — Day 12</div>} />
-        <Route path="health" element={<div className="text-white p-4">Service Health — Day 13</div>} />
+        <Route path="map" element={<LiveMap />} />
+        <Route path="monitoring" element={<div className="text-white p-4">Kafka Monitor — Day 8</div>} />
+        <Route path="health" element={<div className="text-white p-4">Service Health — Day 9</div>} />
       </Route>
     </Routes>
   )
