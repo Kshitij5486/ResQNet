@@ -1,0 +1,1 @@
+export default function Incidents() { return <div className='text-white p-8'>Incidents Page</div> }

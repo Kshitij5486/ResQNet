@@ -1,0 +1,1 @@
+export default function Responders() { return <div className='text-white p-8'>Responders Page</div> }
