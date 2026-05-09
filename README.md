@@ -25,43 +25,61 @@ ResQNet is a distributed emergency response coordination system. When a citizen 
 ---
 
 ## System Architecture
-┌──────────────────────────────┐
-                    │       React Frontend          │
-                    │  Vite · TailwindCSS · Query  │
-                    └──────────────┬───────────────┘
-                                   │ HTTP / REST
-                    ┌──────────────▼───────────────┐
-                    │         API Gateway           │
-                    │    Port 8080 · JWT · CORS    │
-                    └──────┬───────────┬───────────┘
-                           │           │
-           ┌───────────────▼──┐   ┌────▼──────────────────┐
-           │   User Service   │   │   Emergency Service    │
-           │   Port 8081      │   │   Port 8082            │
-           │   JWT · BCrypt   │   │   Incidents · Kafka ──►├──┐
-           │   PostgreSQL     │   │   Producer             │  │
-           └──────────────────┘   └────────────────────────┘  │
-                                                                │
-                    ┌───────────────────────────────────────────┘
-                    │           Apache Kafka Cluster
-                    │   emergency-events     (6 partitions)
-                    │   dispatch-updates     (3 partitions)
-                    │   emergency-events-dlt (3 partitions)
-                    │   dispatch-updates-dlt (3 partitions)
-                    └──────────────────┬────────────────────────
-                                       │ Kafka Consumer
-                    ┌──────────────────▼───────────────┐
-                    │       Dispatch Service            │
-                    │       Port 8083                   │
-                    │  Haversine · Responders · GPS    │
-                    │  PostgreSQL · Redis Cache        │
-                    └──────────────────────────────────┘
 
-    Infrastructure (Docker Compose)
-    ├── PostgreSQL 16.3  (emergency_db · 3 schemas)
-    ├── Redis 7.4        (responder cache · port 6379)
-    ├── Zookeeper        (Kafka coordination · port 2181)
-    └── Kafka Broker     (port 9092)
+```text
+┌──────────────────────────────────────────────────────────────┐
+│                     React Frontend                          │
+│              Vite · TailwindCSS · React Query               │
+└───────────────────────────┬──────────────────────────────────┘
+                            │
+                        HTTP / REST
+                            │
+┌───────────────────────────▼──────────────────────────────────┐
+│                        API Gateway                          │
+│                  Port 8080 · JWT · CORS                     │
+└───────────────┬───────────────────────┬─────────────────────┘
+                │                       │
+                │                       │
+┌───────────────▼──────────────┐   ┌────▼─────────────────────┐
+│        User Service          │   │     Emergency Service    │
+│         Port 8081            │   │        Port 8082         │
+│                              │   │                          │
+│  JWT Authentication          │   │  Incident Management     │
+│  BCrypt Password Hashing     │   │  Kafka Producer          │
+│  PostgreSQL                  │   │  PostgreSQL              │
+└───────────────┬──────────────┘   └──────────────┬───────────┘
+                │                                 │
+                └─────────────────┬───────────────┘
+                                  │
+                                  ▼
+┌──────────────────────────────────────────────────────────────┐
+│                   Apache Kafka Cluster                      │
+│                                                              │
+│  emergency-events        → 6 partitions                      │
+│  dispatch-updates        → 3 partitions                      │
+│  emergency-events-dlt    → 3 partitions                      │
+│  dispatch-updates-dlt    → 3 partitions                      │
+└───────────────────────────┬──────────────────────────────────┘
+                            │
+                      Kafka Consumer
+                            │
+┌───────────────────────────▼──────────────────────────────────┐
+│                     Dispatch Service                        │
+│                        Port 8083                            │
+│                                                              │
+│  Haversine Distance Calculation                             │
+│  Responder Allocation                                       │
+│  GPS Tracking                                                │
+│  PostgreSQL · Redis Cache                                   │
+└──────────────────────────────────────────────────────────────┘
+
+
+Infrastructure (Docker Compose)
+
+├── PostgreSQL 16.3   → emergency_db · 3 schemas
+├── Redis 7.4         → responder cache · port 6379
+├── Zookeeper         → Kafka coordination · port 2181
+└── Kafka Broker      → port 9092
 ---
 
 ## Key Features
