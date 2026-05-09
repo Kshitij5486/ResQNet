@@ -7,29 +7,29 @@ spring:
   cloud:
     gateway:
       routes:
-        - id: user-service-auth
+        - id: user-service
           uri: http://localhost:8081
           predicates:
             - Path=/api/auth/**
-        - id: user-service-users
-          uri: http://localhost:8081
-          predicates:
-            - Path=/api/users/**
-        - id: user-service-admin
-          uri: http://localhost:8081
-          predicates:
-            - Path=/api/admin/**
+          filters:
+            - StripPrefix=0
+
         - id: emergency-service
           uri: http://localhost:8082
           predicates:
             - Path=/api/incidents/**
-      default-filters:
-        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
-  main:
-    web-application-type: reactive
+          filters:
+            - StripPrefix=0
+
+        - id: dispatch-service
+          uri: http://localhost:8083
+          predicates:
+            - Path=/api/responders/**
+          filters:
+            - StripPrefix=0
 
 jwt:
-  secret: ${JWT_SECRET:dev-secret-replace-in-production}
+  secret: change-this-to-a-256-bit-secret
 
 management:
   endpoints:
@@ -39,4 +39,5 @@ management:
 
 logging:
   level:
+    com.emergency: DEBUG
     org.springframework.cloud.gateway: INFO
