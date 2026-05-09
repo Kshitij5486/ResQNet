@@ -77,3 +77,9 @@ logging:
   level:
     com.emergency: DEBUG
     org.springframework.kafka: INFO
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method
