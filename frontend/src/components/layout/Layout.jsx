@@ -6,6 +6,8 @@ import {
 } from 'lucide-react'
 import useAuthStore from '../../store/authStore'
 import toast from 'react-hot-toast'
+import { useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import RealtimeStatusBar from '../ui/RealtimeStatusBar'
 
 const navItems = [
@@ -19,6 +21,19 @@ const navItems = [
 
 export default function Layout() {
   const { logout } = useAuthStore()
+  const location = useLocation()
+
+  useEffect(() => {
+    const titles = {
+      '/':           'Dashboard — ResQNet',
+      '/incidents':  'Incidents — ResQNet',
+      '/responders': 'Responders — ResQNet',
+      '/map':        'Live Map — ResQNet',
+      '/monitoring': 'Kafka Monitor — ResQNet',
+      '/health':     'Service Health — ResQNet',
+    }
+    document.title = titles[location.pathname] || 'ResQNet'
+  }, [location.pathname])
   const navigate   = useNavigate()
   const [showNotif, setShowNotif] = useState(false)
 

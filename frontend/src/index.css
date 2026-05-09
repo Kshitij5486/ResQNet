@@ -12,30 +12,62 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: #0d1526; }
-::-webkit-scrollbar-thumb { background: #1e2d45; border-radius: 3px; }
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #1e2d45; border-radius: 999px; }
 ::-webkit-scrollbar-thumb:hover { background: #3b82f6; }
 
+/* Select options */
+select option { background: #111827; color: #e2e8f0; }
+
+/* Page fade-in */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+main > * { animation: fadeIn 0.25s ease-out; }
+
+/* Ping animation */
+@keyframes ping {
+  75%, 100% { transform: scale(1.8); opacity: 0; }
+}
+
+/* Shimmer animation */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+.shimmer {
+  background: linear-gradient(90deg, #1e2d45 25%, #253550 50%, #1e2d45 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Card hover glow */
+.card-hover {
+  transition: all 0.2s ease;
+}
+.card-hover:hover {
+  box-shadow: 0 0 0 1px rgba(59,130,246,0.2), 0 4px 20px rgba(0,0,0,0.3);
+  transform: translateY(-1px);
+}
+
+/* Stat card number animation */
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+.stat-number { animation: countUp 0.4s ease-out; }
+
+/* Glass morphism */
 .glass {
   background: rgba(17, 24, 39, 0.8);
   backdrop-filter: blur(12px);
   border: 1px solid rgba(30, 45, 69, 0.6);
 }
-@keyframes ping {
-  75%, 100% { transform: scale(1.8); opacity: 0; }
-}
-/* Page transitions */
-main > * {
-  animation: fadeIn 0.2s ease-in-out;
-}
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: translateY(0);   }
-}
-
-/* Leaflet popup fix */
+/* Leaflet popup */
 .leaflet-popup-content-wrapper {
   background: transparent !important;
   border: none !important;
@@ -43,22 +75,58 @@ main > * {
   padding: 0 !important;
 }
 .leaflet-popup-content { margin: 0 !important; }
-.leaflet-popup-tip { background: #1e2d45 !important; }
-.leaflet-container { background: #0a0f1e !important; }
+.leaflet-popup-tip     { background: #1e2d45 !important; }
+.leaflet-container     { background: #0a0f1e !important; }
 
-/* Scrollbar */
-::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #1e2d45; border-radius: 999px; }
-::-webkit-scrollbar-thumb:hover { background: #3b82f6; }
+/* Focus ring */
+input:focus, select:focus, textarea:focus, button:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
 
-/* Select element */
-select option {
+/* Tooltip */
+[data-tooltip] {
+  position: relative;
+}
+[data-tooltip]:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
   background: #111827;
+  border: 1px solid #1e2d45;
   color: #e2e8f0;
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 100;
 }
 
-/* Pulse ring animation */
-@keyframes ping {
-  75%, 100% { transform: scale(1.8); opacity: 0; }
+/* Modal backdrop blur */
+.modal-backdrop {
+  backdrop-filter: blur(4px);
 }
+
+/* Pulse dot */
+.pulse-dot {
+  position: relative;
+}
+.pulse-dot::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.3;
+  animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+/* Table row hover */
+tr.clickable { cursor: pointer; transition: background 0.15s ease; }
+tr.clickable:hover td { background: rgba(30,45,69,0.4); }
+
+/* Button press effect */
+button:active { transform: scale(0.98); }
