@@ -86,7 +86,7 @@ public class DispatchService {
 
     @Transactional(readOnly = true)
     public List<ResponderResponse> getAllResponders(String city) {
-        return responderRepository.findByCityAndStatus(city, "AVAILABLE")
+        return responderRepository.findAllByCity(city)
                 .stream().map(this::toResponse).collect(Collectors.toList());
     }
 

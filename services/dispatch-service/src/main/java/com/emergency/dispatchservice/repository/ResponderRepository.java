@@ -19,6 +19,9 @@ public interface ResponderRepository extends JpaRepository<Responder, UUID> {
     @Query(value = "SELECT * FROM dispatch.responders WHERE city = :city AND status = :status", nativeQuery = true)
     List<Responder> findByCityAndStatus(String city, String status);
 
+    @Query(value = "SELECT * FROM dispatch.responders WHERE city = :city", nativeQuery = true)
+    List<Responder> findAllByCity(String city);
+
     @Modifying
     @Query(value = "UPDATE dispatch.responders SET status = CAST(:status AS dispatch.responder_status), current_incident_id = :incidentId WHERE id = CAST(:id AS uuid)", nativeQuery = true)
     void updateStatusAndIncident(String id, String status, UUID incidentId);
