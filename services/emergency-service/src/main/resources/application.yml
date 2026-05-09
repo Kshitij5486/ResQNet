@@ -44,7 +44,19 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info,metrics,env,beans,loggers
+  endpoint:
+    health:
+      show-details: always
+  info:
+    env:
+      enabled: true
+
+info:
+  app:
+    name: ResQNet Emergency Service
+    version: 1.0.0
+    description: Handles incident creation and lifecycle
 
 logging:
   level:

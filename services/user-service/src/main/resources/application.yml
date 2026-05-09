@@ -1,14 +1,17 @@
 server:
   port: 8081
+
 spring:
   application:
     name: user-service
+
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://127.0.0.1:5432/emergency_db}
     username: ${SPRING_DATASOURCE_USERNAME:emergency_user}
     password: ${SPRING_DATASOURCE_PASSWORD:emergency_pass}
     hikari:
       maximum-pool-size: 10
+
   jpa:
     hibernate:
       ddl-auto: validate
@@ -16,16 +19,35 @@ spring:
       hibernate:
         default_schema: users
         dialect: org.hibernate.dialect.PostgreSQLDialect
+
   flyway:
     enabled: true
     schemas: users
     locations: classpath:db/migration
+
 jwt:
   secret: ${JWT_SECRET:dev-secret-replace-in-production}
   access-token-expiry-ms: 3600000
   refresh-token-expiry-days: 30
+
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info,metrics,env,beans,loggers
+  endpoint:
+    health:
+      show-details: always
+  info:
+    env:
+      enabled: true
+
+info:
+  app:
+    name: ResQNet User Service
+    version: 1.0.0
+    description: JWT auth, user registration and login
+
+logging:
+  level:
+    com.emergency: DEBUG
