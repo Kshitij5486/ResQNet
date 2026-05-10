@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional, List, Dict
 from enum import Enum
 
 class IncidentType(str, Enum):
@@ -16,23 +16,28 @@ class City(str, Enum):
 class SeverityRequest(BaseModel):
     type:        IncidentType
     city:        City
-    hour:        int  # 0-23
-    day_of_week: int  # 0=Monday
+    hour:        int
+    day_of_week: int
 
 class SeverityResponse(BaseModel):
-    predicted_severity: int
-    confidence:         float
-    risk_level:         str
-    reasoning:          str
+    predicted_severity:   int
+    confidence:           float
+    risk_level:           str
+    reasoning:            str
+    class_probabilities:  Optional[Dict[int, float]] = None
+    factors:              Optional[Dict]              = None
 
 class ResponderScore(BaseModel):
-    responder_id:   str
-    name:           str
-    type:           str
-    distance_km:    float
-    score:          float
-    rank:           int
-    recommendation: str
+    responder_id:              str
+    name:                      str
+    type:                      str
+    distance_km:               float
+    score:                     float
+    rank:                      int
+    type_compatibility:        Optional[float] = None
+    distance_score:            Optional[float] = None
+    estimated_arrival_minutes: Optional[float] = None
+    recommendation:            str
 
 class DispatchRequest(BaseModel):
     incident_id:   str
@@ -42,32 +47,20 @@ class DispatchRequest(BaseModel):
     longitude:     float
     severity:      int
 
-class DispatchResponse(BaseModel):
-    incident_id:  str
-    ranked_responders: List[ResponderScore]
-    best_responder_id: str
-    estimated_arrival_minutes: float
-    ai_confidence: float
-
-class ForecastRequest(BaseModel):
-    city:         City
-    hours_ahead:  int = 24
-
 class HourlyForecast(BaseModel):
-    hour:             int
+    hour:                int
+    hour_label:          Optional[str] = None
     predicted_incidents: float
-    confidence:       float
-    peak:             bool
+    confidence:          float
+    peak:                bool
+    is_rush_hour:        Optional[bool] = None
+    is_weekend_hour:     Optional[bool] = None
 
 class ForecastResponse(BaseModel):
-    city:      str
-    forecasts: List[HourlyForecast]
-    peak_hour: int
-    total_predicted: float
-
-class AnomalyResponse(BaseModel):
-    is_anomaly:   bool
-    anomaly_score: float
-    description:  str
-    affected_city: Optional[str]
-    recommendation: str
+    city:             str
+    forecasts:        List[HourlyForecast]
+    peak_hour:        int
+    peak_hour_label:  Optional[str] = None
+    total_predicted:  float
+    avg_per_hour:     Optional[float] = None
+    high_risk_hours:  Optional[List[int]] = None
