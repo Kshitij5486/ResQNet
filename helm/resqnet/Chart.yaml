@@ -1,0 +1,17 @@
+apiVersion: v2
+name: resqnet
+description: AI-Powered Distributed Emergency Response Platform
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - emergency
+  - microservices
+  - kafka
+  - ai
+  - spring-boot
+home: https://github.com/Kshitij5486/ResQNet
+maintainers:
+  - name: Kshitij
+    url:  https://github.com/Kshitij5486
+dependencies: []

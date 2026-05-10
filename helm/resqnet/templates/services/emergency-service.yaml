@@ -1,0 +1,1 @@
+{{- include "resqnet.serviceDeployment" (dict "name" "emergency-service" "values" .Values.emergencyService "root" .) }}

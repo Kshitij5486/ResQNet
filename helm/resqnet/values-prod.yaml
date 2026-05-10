@@ -1,0 +1,39 @@
+# Production overrides — use with:
+# helm upgrade --install resqnet ./helm/resqnet -f helm/resqnet/values-prod.yaml
+
+global:
+  imageRegistry: ghcr.io/kshitij5486/resqnet
+  imagePullPolicy: Always
+
+userService:
+  replicas: 3
+  hpa:
+    maxReplicas: 10
+
+emergencyService:
+  replicas: 3
+  hpa:
+    maxReplicas: 12
+
+dispatchService:
+  replicas: 3
+  hpa:
+    maxReplicas: 8
+
+apiGateway:
+  replicas: 3
+  hpa:
+    maxReplicas: 8
+
+aiService:
+  replicas: 2
+
+frontend:
+  replicas: 3
+
+secrets:
+  jwtSecret: CHANGE_ME_IN_PRODUCTION
+
+ingress:
+  host: resqnet.yourdomain.com
+  tls:  true
