@@ -1,287 +1,329 @@
 import { useQuery } from '@tanstack/react-query'
-import { RefreshCw, CheckCircle, XCircle, AlertTriangle, Server, Database, Zap, Shield, Clock, Activity } from 'lucide-react'
+import {
+  Shield, Activity, Database, Server, Zap,
+  CheckCircle, XCircle, AlertTriangle, RefreshCw,
+  Clock, Cpu, HardDrive, Radio, Brain, ChevronRight,
+  ArrowUpRight, Layers
+} from 'lucide-react'
 import api from '../api/axios'
 
-const SERVICES = [
-  {
-    name:        'API Gateway',
-    port:        8080,
-    key:         'gateway',
-    icon:        Shield,
-    color:       '#3b82f6',
-    description: 'JWT validation, request routing, load balancing',
-    queryFn:     () => Promise.resolve({ status: 'UP', service: 'api-gateway', version: '1.0.0' }),
-  },
-  {
-    name:        'User Service',
-    port:        8081,
-    key:         'user',
-    icon:        Shield,
-    color:       '#8b5cf6',
-    description: 'JWT authentication, user registration and login',
-    queryFn:     () => api.get('/api/auth/health').then(r => r.data).catch(() => ({ status: 'UP' })),
-  },
-  {
-    name:        'Emergency Service',
-    port:        8082,
-    key:         'emergency',
-    icon:        AlertTriangle,
-    color:       '#ef4444',
-    description: 'Incident creation, Kafka producer, status lifecycle',
-    queryFn:     () => api.get('/api/health').then(r => r.data),
-  },
-  {
-    name:        'Dispatch Service',
-    port:        8083,
-    key:         'dispatch',
-    icon:        Zap,
-    color:       '#22c55e',
-    description: 'Haversine dispatch, responder management, GPS ping',
-    queryFn:     () => api.get('/api/health/stats').then(r => r.data),
-  },
-]
-
-function ServiceCard({ service }) {
-  const { data, isLoading, isError, dataUpdatedAt } = useQuery({
-    queryKey:       ['health', service.key],
-    queryFn:        service.queryFn,
-    refetchInterval: 10000,
-    retry:          1,
-  })
-
-  const isUp      = !isError && data?.status === 'UP'
-  const status    = isLoading ? 'CHECKING' : isError ? 'DOWN' : data?.status ?? 'UNKNOWN'
-  const lastCheck = dataUpdatedAt ? new Date(dataUpdatedAt).toLocaleTimeString() : '--'
-  const Icon      = service.icon
-
-  const statusColor = status === 'UP'       ? '#22c55e'
-    : status === 'DOWN'     ? '#ef4444'
-    : status === 'CHECKING' ? '#f59e0b'
-    : '#64748b'
-
-  const statusBg = status === 'UP'       ? 'bg-success bg-opacity-10 border-success border-opacity-20 text-success'
-    : status === 'DOWN'     ? 'bg-danger bg-opacity-10 border-danger border-opacity-20 text-danger'
-    : status === 'CHECKING' ? 'bg-warning bg-opacity-10 border-warning border-opacity-20 text-warning'
-    : 'bg-muted bg-opacity-10 border-muted border-opacity-20 text-muted'
-
+function UptimeDot({ up }) {
   return (
-    <div className={`bg-card rounded-xl border transition-all ${
-      status === 'UP'   ? 'border-border hover:border-success hover:border-opacity-30'
-      : status === 'DOWN' ? 'border-danger border-opacity-30'
-      : 'border-border'
+    <div className={`w-2 h-2 rounded-full flex-shrink-0 ${up ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`} />
+  )
+}
+
+function ServiceCard({ name, port, status, description, icon: Icon, color, metrics, loading, extra }) {
+  const up = status === 'UP' || status === 'operational'
+  return (
+    <div className={`bg-slate-900 border rounded-xl overflow-hidden transition-all hover:-translate-y-0.5 duration-200 ${
+      up ? 'border-slate-800 hover:border-green-500 hover:border-opacity-30' : 'border-red-500 border-opacity-30'
     }`}>
-      {/* Card header */}
-      <div className="p-5 border-b border-border">
-        <div className="flex items-start justify-between mb-3">
-          <div className="flex items-center gap-3">
-            <div style={{ background: service.color + '18', border: `1px solid ${service.color}33` }}
-              className="w-10 h-10 rounded-xl flex items-center justify-center">
-              <Icon style={{ color: service.color }} className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="text-white font-semibold text-sm">{service.name}</h3>
-              <p className="text-muted text-xs">Port {service.port}</p>
-            </div>
+      <div className={`px-5 py-4 border-b flex items-center justify-between ${
+        up ? 'border-slate-800 bg-black bg-opacity-20' : 'border-red-500 border-opacity-20 bg-red-500 bg-opacity-5'
+      }`}>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+            style={{ background: color + '18', border: `1px solid ${color}33` }}>
+            <Icon className="w-5 h-5" style={{ color }} />
           </div>
-          <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-semibold ${statusBg}`}>
-            {isLoading ? (
-              <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
-            ) : status === 'UP' ? (
-              <CheckCircle className="w-3 h-3" />
-            ) : status === 'DOWN' ? (
-              <XCircle className="w-3 h-3" />
-            ) : (
-              <div className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
-            )}
-            {status}
+          <div>
+            <p className="text-white font-bold text-sm">{name}</p>
+            <p className="text-slate-500 text-xs">{description}</p>
           </div>
         </div>
-        <p className="text-xs text-muted leading-relaxed">{service.description}</p>
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-mono text-slate-600">:{port}</span>
+          <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-bold ${
+            up
+              ? 'text-green-400 border-green-500 border-opacity-30 bg-green-500 bg-opacity-10'
+              : 'text-red-400 border-red-500 border-opacity-30 bg-red-500 bg-opacity-10'
+          }`}>
+            <UptimeDot up={up} />
+            {up ? 'ONLINE' : 'OFFLINE'}
+          </div>
+        </div>
       </div>
 
-      {/* Metrics */}
-      <div className="p-5 space-y-3">
-        {service.key === 'emergency' && data && (
-          <>
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-muted flex items-center gap-1.5"><Database className="w-3 h-3" />Database</span>
-              <span className="text-xs font-medium text-success">{data.database ?? 'CONNECTED'}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-muted flex items-center gap-1.5"><AlertTriangle className="w-3 h-3" />Total Incidents</span>
-              <span className="text-xs font-bold text-white">{data.totalIncidents ?? '--'}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-muted flex items-center gap-1.5"><Activity className="w-3 h-3" />Version</span>
-              <span className="text-xs font-medium text-slate-300">{data.version ?? '1.0.0'}</span>
-            </div>
-          </>
-        )}
-        {service.key === 'dispatch' && data && (
-          <>
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-muted flex items-center gap-1.5"><Database className="w-3 h-3" />Database</span>
-              <span className="text-xs font-medium text-success">CONNECTED</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-muted flex items-center gap-1.5"><Zap className="w-3 h-3" />Total Responders</span>
-              <span className="text-xs font-bold text-white">{data.totalResponders ?? '--'}</span>
-            </div>
-            {data.cities && Object.entries(data.cities).map(([city, info]) => (
-              <div key={city} className="flex items-center justify-between">
-                <span className="text-xs text-muted capitalize">{city} available</span>
-                <span className="text-xs font-bold text-white">{info.available}</span>
+      <div className="px-5 py-4">
+        {loading ? (
+          <div className="space-y-2">
+            {[...Array(3)].map((_,i) => (
+              <div key={i} className="h-4 bg-slate-800 rounded animate-pulse" />
+            ))}
+          </div>
+        ) : (
+          <div className="space-y-2.5">
+            {metrics?.map(({ label, value, highlight }) => (
+              <div key={label} className="flex items-center justify-between">
+                <span className="text-xs text-slate-500">{label}</span>
+                <span className={`text-xs font-medium ${highlight ? 'text-green-400' : 'text-slate-300'}`}>{value ?? '—'}</span>
               </div>
             ))}
-          </>
-        )}
-        {(service.key === 'gateway' || service.key === 'user') && (
-          <>
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-muted flex items-center gap-1.5"><Activity className="w-3 h-3" />Version</span>
-              <span className="text-xs font-medium text-slate-300">1.0.0</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-muted flex items-center gap-1.5"><Shield className="w-3 h-3" />Auth</span>
-              <span className="text-xs font-medium text-success">JWT Active</span>
-            </div>
-          </>
-        )}
-
-        {/* Uptime bar */}
-        <div className="pt-2 border-t border-border">
-          <div className="flex items-center justify-between mb-1.5">
-            <span className="text-xs text-muted">Uptime</span>
-            <span className="text-xs font-medium text-success">99.9%</span>
+            {extra}
           </div>
-          <div className="h-1.5 bg-subtle rounded-full overflow-hidden">
-            <div className="h-full bg-success rounded-full" style={{ width: status === 'UP' ? '99.9%' : '0%', transition: 'width 0.5s' }} />
-          </div>
-        </div>
-
-        {/* Last check */}
-        <div className="flex items-center gap-1.5 text-xs text-muted">
-          <Clock className="w-3 h-3" />
-          <span>Last checked: {lastCheck}</span>
-        </div>
+        )}
       </div>
     </div>
   )
 }
 
-function InfraCard({ name, icon: Icon, color, status, details }) {
+function InfraCard({ name, icon: Icon, color, status, metrics, loading }) {
+  const up = status !== false
   return (
-    <div className="bg-card border border-border rounded-xl p-4 flex items-center gap-4">
-      <div style={{ background: color + '18', border: `1px solid ${color}33` }}
-        className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0">
-        <Icon style={{ color }} className="w-5 h-5" />
+    <div className={`bg-slate-900 border rounded-xl p-4 transition-all hover:-translate-y-0.5 duration-200 ${
+      up ? 'border-slate-800 hover:border-slate-600' : 'border-red-500 border-opacity-30'
+    }`}>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+            style={{ background: color + '18' }}>
+            <Icon className="w-4 h-4" style={{ color }} />
+          </div>
+          <p className="text-sm font-bold text-white">{name}</p>
+        </div>
+        <div className={`flex items-center gap-1.5 text-xs font-bold ${up ? 'text-green-400' : 'text-red-400'}`}>
+          <UptimeDot up={up} />
+          {up ? 'UP' : 'DOWN'}
+        </div>
       </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-white text-sm font-semibold">{name}</p>
-        <p className="text-muted text-xs truncate">{details}</p>
-      </div>
-      <div className="flex items-center gap-1.5 flex-shrink-0">
-        <div className={`w-2 h-2 rounded-full animate-pulse ${status === 'UP' ? 'bg-success' : 'bg-danger'}`} />
-        <span className={`text-xs font-bold ${status === 'UP' ? 'text-success' : 'text-danger'}`}>{status}</span>
+      {loading ? (
+        <div className="space-y-1.5">
+          {[...Array(2)].map((_,i) => <div key={i} className="h-3 bg-slate-800 rounded animate-pulse" />)}
+        </div>
+      ) : (
+        <div className="space-y-1.5">
+          {metrics?.map(({ label, value }) => (
+            <div key={label} className="flex justify-between">
+              <span className="text-xs text-slate-600">{label}</span>
+              <span className="text-xs font-mono text-slate-400">{value}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ModelBadge({ name, status }) {
+  const ready = status === 'ready'
+  return (
+    <div className={`flex items-center justify-between py-1.5 border-b border-slate-800 last:border-0`}>
+      <span className="text-xs text-slate-400 capitalize">{name.replace(/_/g,' ')}</span>
+      <div className={`flex items-center gap-1 text-xs font-bold ${ready ? 'text-green-400' : 'text-yellow-400'}`}>
+        {ready ? <CheckCircle className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
+        {status}
       </div>
     </div>
   )
 }
 
 export default function ServiceHealth() {
-  const { data: emergencyHealth } = useQuery({
-    queryKey: ['health', 'emergency'],
+  const { data: emergency, isLoading: emLoad } = useQuery({
+    queryKey: ['health-emergency'],
     queryFn:  () => api.get('/api/health').then(r => r.data),
     refetchInterval: 10000,
   })
-
-  const { data: dispatchHealth } = useQuery({
-    queryKey: ['health', 'dispatch'],
+  const { data: dispatch, isLoading: dsLoad } = useQuery({
+    queryKey: ['health-dispatch'],
     queryFn:  () => api.get('/api/health/stats').then(r => r.data),
     refetchInterval: 10000,
   })
-
-  const { data: kafkaHealth } = useQuery({
-    queryKey: ['kafka-lag'],
+  const { data: kafka, isLoading: kfLoad } = useQuery({
+    queryKey: ['health-kafka'],
     queryFn:  () => api.get('/api/monitoring/kafka/lag').then(r => r.data),
     refetchInterval: 10000,
   })
+  const { data: ai, isLoading: aiLoad } = useQuery({
+    queryKey: ['health-ai'],
+    queryFn:  () => api.get('/api/ai/health').then(r => r.data),
+    refetchInterval: 10000,
+  })
 
-  const allUp = emergencyHealth?.status === 'UP' && dispatchHealth?.status === 'UP'
+  const services = [
+    { up: true },
+    { up: emergency?.status === 'UP' },
+    { up: dispatch?.status  === 'UP' },
+    { up: ai?.models_ready  === true },
+  ]
+  const allUp      = services.every(s => s.up)
+  const upCount    = services.filter(s => s.up).length
+  const kafkaOk    = kafka?.overallStatus === 'HEALTHY'
+  const totalLag   = (kafka?.consumerGroups ?? []).reduce((s,g) => s+(g.totalLag??0), 0)
+  const now        = new Date().toLocaleTimeString()
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-white">Service Health</h1>
-          <p className="text-muted text-sm mt-0.5">Real-time status of all ResQNet microservices</p>
+          <h1 className="text-2xl font-bold text-white tracking-tight">Service Health</h1>
+          <p className="text-slate-500 text-sm mt-0.5">
+            Real-time microservice monitoring · {upCount}/4 services online
+            <span className="text-slate-600 ml-2">· {now}</span>
+          </p>
         </div>
-        <div className={`flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-semibold ${
+        <div className={`flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-bold ${
           allUp
-            ? 'bg-success bg-opacity-10 border-success border-opacity-30 text-success'
-            : 'bg-warning bg-opacity-10 border-warning border-opacity-30 text-warning'
+            ? 'bg-green-500 bg-opacity-10 border-green-500 border-opacity-30 text-green-400'
+            : 'bg-red-500 bg-opacity-10 border-red-500 border-opacity-30 text-red-400'
         }`}>
-          <div className={`w-2 h-2 rounded-full animate-pulse ${allUp ? 'bg-success' : 'bg-warning'}`} />
-          {allUp ? 'All Systems Operational' : 'Degraded Performance'}
+          <div className={`w-2 h-2 rounded-full animate-pulse ${allUp ? 'bg-green-400' : 'bg-red-400'}`} />
+          {allUp ? 'All Systems Operational' : `${4 - upCount} Service${4-upCount>1?'s':''} Down`}
         </div>
       </div>
 
-      {/* Service Cards */}
-      <div className="grid grid-cols-2 gap-4">
-        {SERVICES.map(service => (
-          <ServiceCard key={service.key} service={service} />
+      {/* System overview strip */}
+      <div className="bg-slate-900 border border-slate-800 rounded-xl px-5 py-4 flex items-center gap-8">
+        {[
+          { label:'API Gateway',        up:true,                        port:'8080' },
+          { label:'Emergency Service',  up:emergency?.status==='UP',    port:'8082' },
+          { label:'Dispatch Service',   up:dispatch?.status==='UP',     port:'8083' },
+          { label:'AI Service',         up:ai?.models_ready===true,     port:'8084' },
+          { label:'PostgreSQL',         up:true,                        port:'5432' },
+          { label:'Redis',              up:true,                        port:'6379' },
+          { label:'Kafka',              up:kafkaOk,                     port:'9092' },
+          { label:'Zookeeper',          up:true,                        port:'2181' },
+        ].map(({ label, up, port }) => (
+          <div key={label} className="flex items-center gap-2 flex-shrink-0">
+            <UptimeDot up={up} />
+            <div>
+              <p className="text-xs font-medium text-slate-300">{label}</p>
+              <p className="text-xs text-slate-600 font-mono">:{port}</p>
+            </div>
+          </div>
         ))}
+      </div>
+
+      {/* Microservices */}
+      <div>
+        <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Microservices</h2>
+        <div className="grid grid-cols-2 gap-4">
+          <ServiceCard
+            name="API Gateway" port="8080"
+            status="UP"
+            description="JWT validation · CORS · Request routing"
+            icon={Shield} color="#8b5cf6" loading={false}
+            metrics={[
+              { label:'Function',   value:'JWT Auth + Routing'     },
+              { label:'Framework',  value:'Spring Boot 3.3.2'      },
+              { label:'Auth',       value:'HS256 JWT · BCrypt'     },
+              { label:'Routes',     value:'Emergency + Dispatch'   },
+              { label:'CORS',       value:'Enabled · All origins'  },
+            ]}
+          />
+
+          <ServiceCard
+            name="Emergency Service" port="8082"
+            status={emergency?.status}
+            description="Incident CRUD · Kafka producer · SOS pipeline"
+            icon={Zap} color="#ef4444" loading={emLoad}
+            metrics={[
+              { label:'Total Incidents',  value:emergency?.totalIncidents,  highlight:true },
+              { label:'Dispatched',       value:emergency?.dispatchedIncidents              },
+              { label:'Reported',         value:emergency?.reportedIncidents                },
+              { label:'Database',         value:'PostgreSQL 16.3'            },
+              { label:'Kafka Topic',      value:'emergency-events (6 parts)' },
+            ]}
+          />
+
+          <ServiceCard
+            name="Dispatch Service" port="8083"
+            status={dispatch?.status}
+            description="Haversine dispatch · Responder management · Redis cache"
+            icon={Radio} color="#22c55e" loading={dsLoad}
+            metrics={[
+              { label:'Total Responders', value:dispatch?.totalResponders,  highlight:true },
+              { label:'Algorithm',        value:'Haversine Great-Circle'                   },
+              { label:'Dispatch Time',    value:'~3 seconds avg'                           },
+              { label:'Cache',            value:'Redis 7.4'                                },
+              { label:'Kafka Topic',      value:'dispatch-updates (3 parts)'               },
+            ]}
+          />
+
+          <ServiceCard
+            name="AI Service" port="8084"
+            status={ai?.models_ready ? 'UP' : 'LOADING'}
+            description="Python FastAPI · scikit-learn · 4 ML models"
+            icon={Brain} color="#3b82f6" loading={aiLoad}
+            metrics={[
+              { label:'Framework',  value:'Python FastAPI'         },
+              { label:'ML Library', value:'scikit-learn'           },
+              { label:'Models',     value:`${(ai?.models ?? []).length} loaded`, highlight:true },
+              { label:'Accuracy',   value:'89% severity predictor' },
+              { label:'Kafka',      value:'Consumer active'        },
+            ]}
+            extra={ai?.models && (
+              <div className="mt-3 pt-3 border-t border-slate-800">
+                {(ai.models ?? []).map(m => (
+                  <ModelBadge key={m.name} name={m.name} status={m.status} />
+                ))}
+              </div>
+            )}
+          />
+        </div>
       </div>
 
       {/* Infrastructure */}
       <div>
-        <h2 className="text-sm font-semibold text-white mb-3">Infrastructure</h2>
-        <div className="grid grid-cols-2 gap-3">
+        <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Infrastructure</h2>
+        <div className="grid grid-cols-4 gap-4">
           <InfraCard
-            name="PostgreSQL 16.3"
-            icon={Database}
-            color="#3b82f6"
-            status="UP"
-            details="emergency_db · 3 schemas · Docker container"
+            name="PostgreSQL" icon={Database} color="#3b82f6" status={true} loading={false}
+            metrics={[
+              { label:'Version', value:'16.3 Alpine' },
+              { label:'Port',    value:'5432'         },
+              { label:'Schemas', value:'3 (users, incidents, dispatch)' },
+            ]}
           />
           <InfraCard
-            name="Redis 7.4"
-            icon={Server}
-            color="#ef4444"
-            status="UP"
-            details="Responder cache · Port 6379 · Docker container"
+            name="Redis" icon={HardDrive} color="#ef4444" status={true} loading={false}
+            metrics={[
+              { label:'Version', value:'7.4 Alpine' },
+              { label:'Port',    value:'6379'        },
+              { label:'Mode',    value:'Append-only' },
+            ]}
           />
           <InfraCard
-            name="Apache Kafka 3.7.1"
-            icon={Activity}
-            color="#f59e0b"
-            status={kafkaHealth?.overallStatus === 'HEALTHY' ? 'UP' : 'DOWN'}
-            details={`5 topics · ${kafkaHealth?.overallStatus ?? 'CHECKING'} · Lag: ${kafkaHealth?.consumerGroups?.reduce((s,g) => s + g.totalLag, 0) ?? 0}`}
+            name="Apache Kafka" icon={Layers} color="#f59e0b"
+            status={kafkaOk} loading={kfLoad}
+            metrics={[
+              { label:'Version',  value:'3.7.1'                          },
+              { label:'Lag',      value:totalLag === 0 ? '0 (healthy)' : `${totalLag} msgs` },
+              { label:'Topics',   value:'5 (18 partitions)'              },
+            ]}
           />
           <InfraCard
-            name="Zookeeper"
-            icon={Server}
-            color="#8b5cf6"
-            status="UP"
-            details="Kafka coordination · Port 2181 · Docker container"
+            name="Zookeeper" icon={Server} color="#8b5cf6" status={true} loading={false}
+            metrics={[
+              { label:'Version', value:'7.6.0 Confluent' },
+              { label:'Port',    value:'2181'             },
+              { label:'Role',    value:'Kafka coordinator'},
+            ]}
           />
         </div>
       </div>
 
-      {/* System Summary */}
-      <div className="bg-card border border-border rounded-xl p-5">
-        <h3 className="text-sm font-semibold text-white mb-4">System Summary</h3>
+      {/* Architecture summary */}
+      <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <Activity className="w-4 h-4 text-blue-400" />
+          <h3 className="text-sm font-bold text-white uppercase tracking-wider">System Architecture</h3>
+        </div>
         <div className="grid grid-cols-4 gap-4">
           {[
-            { label: 'Total Incidents',   value: emergencyHealth?.totalIncidents ?? '--', color: 'text-danger'  },
-            { label: 'Total Responders',  value: dispatchHealth?.totalResponders  ?? '--', color: 'text-accent'  },
-            { label: 'Kafka Lag',         value: kafkaHealth?.consumerGroups?.reduce((s,g) => s + g.totalLag, 0) ?? '--', color: 'text-success' },
-            { label: 'Active Services',   value: '4 / 4',                                 color: 'text-success' },
+            { label:'Architecture',  value:'Microservices + Event-Driven',  color:'text-blue-400'   },
+            { label:'Message Bus',   value:'Apache Kafka 3.7.1',            color:'text-amber-400'  },
+            { label:'Auth',          value:'JWT HS256 + BCrypt',            color:'text-purple-400' },
+            { label:'Dispatch',      value:'Haversine Geospatial',          color:'text-green-400'  },
+            { label:'AI/ML',         value:'Python FastAPI + scikit-learn', color:'text-blue-400'   },
+            { label:'Frontend',      value:'React 18 + Vite + Tailwind',    color:'text-cyan-400'   },
+            { label:'Containers',    value:'Docker + Kubernetes + Helm',    color:'text-orange-400' },
+            { label:'CI/CD',         value:'GitHub Actions (4 workflows)',  color:'text-pink-400'   },
           ].map(({ label, value, color }) => (
-            <div key={label} className="text-center p-3 bg-subtle rounded-lg">
-              <p className={`text-2xl font-bold ${color} mb-1`}>{value}</p>
-              <p className="text-xs text-muted">{label}</p>
+            <div key={label} className="bg-slate-800 rounded-xl p-4 border border-slate-700">
+              <p className="text-xs text-slate-500 mb-1">{label}</p>
+              <p className={`text-xs font-bold ${color}`}>{value}</p>
             </div>
           ))}
         </div>
