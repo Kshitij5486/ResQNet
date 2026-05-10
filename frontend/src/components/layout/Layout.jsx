@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, AlertTriangle, Users, Map,
-  Activity, Shield, LogOut, Bell, ChevronRight, X
+  Activity, Shield, LogOut, Bell, ChevronRight, X, Brain
 } from 'lucide-react'
 import useAuthStore from '../../store/authStore'
 import toast from 'react-hot-toast'
@@ -17,6 +17,7 @@ const navItems = [
   { to: '/map',        icon: Map,             label: 'Live Map'               },
   { to: '/monitoring', icon: Activity,        label: 'Kafka Monitor'          },
   { to: '/health',     icon: Shield,          label: 'Service Health'         },
+  { to: '/ai',          icon: Brain,           label: 'AI Insights'            },
 ]
 
 export default function Layout() {

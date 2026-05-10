@@ -7,6 +7,7 @@ import Responders from './pages/Responders'
 import LiveMap from './pages/LiveMap'
 import KafkaMonitor from './pages/KafkaMonitor'
 import ServiceHealth from './pages/ServiceHealth'
+import AIInsights from './pages/AIInsights'
 import Layout from './components/layout/Layout'
 
 function ProtectedRoute({ children }) {
@@ -25,11 +26,12 @@ function App() {
         </ProtectedRoute>
       }>
         <Route index element={<Dashboard />} />
-        <Route path="incidents" element={<Incidents />} />
+        <Route path="incidents"  element={<Incidents />} />
         <Route path="responders" element={<Responders />} />
-        <Route path="map" element={<LiveMap />} />
+        <Route path="map"        element={<LiveMap />} />
         <Route path="monitoring" element={<KafkaMonitor />} />
-        <Route path="health" element={<ServiceHealth />} />
+        <Route path="health"     element={<ServiceHealth />} />
+        <Route path="ai"         element={<AIInsights />} />
       </Route>
     </Routes>
   )
