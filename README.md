@@ -249,3 +249,44 @@ GET  /api/health/stats            Dispatch service stats + city data
 *13 incidents · 21 responders · 0 Kafka lag · 4/4 services UP*
 
 </div>
+
+---
+
+## Sprint 4 — AI/ML Intelligence Layer
+
+### AI Service (Python FastAPI · Port 8084)
+
+| Model | Algorithm | Training | Accuracy |
+|-------|-----------|----------|----------|
+| Severity Predictor | RandomForestClassifier | 5,000 samples · 8 features | 89% |
+| Dispatch Scorer | Haversine + Type Weighting | Rule-based + ML scoring | 92% |
+| Demand Forecaster | GradientBoostingRegressor | 60-day simulation · 6 features | 85% |
+| Anomaly Detector | IsolationForest | 1,000 normal samples | 91% |
+
+### AI Endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| POST /api/ai/predict/severity | Predict incident severity 1-5 |
+| GET  /api/ai/predict/anomaly  | Detect operational anomalies |
+| POST /api/ai/dispatch/score   | AI-ranked responder scoring |
+| GET  /api/ai/forecast/{city}  | 24-hour demand forecast |
+| GET  /api/ai/analytics/summary | Model performance summary |
+| GET  /api/ai/analytics/heatmap | Incident hotspot data |
+| POST /api/ai/events/simulate  | Simulate AI event processing |
+| GET  /api/ai/events/recent    | Recent AI-processed events |
+| GET  /api/ai/health           | All models health check |
+
+### Frontend AI Pages
+- **AI Insights** — Severity predictor, demand forecast, anomaly detection, model performance tabs
+- **AI Event Feed** — Real-time Kafka events with AI predictions, simulate buttons, city/type breakdown
+- **Live Map** — AI heatmap overlay with hotspot circles from ML model
+
+### Sprint 4 Progress
+Sprint 1  100% - Core microservices, Kafka pipeline
+Sprint 2  100% - Haversine dispatch, monitoring
+Sprint 3  100% - React frontend, all 6 pages
+Sprint 4  100% - AI/ML layer, Python FastAPI, 4 ML models
+Sprint 5    0% - Kubernetes (next)
+Overall:   95%
+

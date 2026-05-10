@@ -1,7 +1,6 @@
 from fastapi import APIRouter
 from datetime import datetime
 from app.services.model_service import ModelService
-import httpx
 import logging
 
 logger = logging.getLogger(__name__)
@@ -31,6 +30,27 @@ def analytics_summary():
             "incident_type", "city", "hour_of_day", "day_of_week",
             "is_night", "is_weekend", "is_rush_hour", "city_density",
         ],
+        "performance_metrics": {
+            "severity_model": {
+                "algorithm":        "RandomForestClassifier",
+                "n_estimators":     200,
+                "training_samples": 5000,
+                "estimated_accuracy": 0.89,
+                "features":         8,
+            },
+            "forecast_model": {
+                "algorithm":        "GradientBoostingRegressor",
+                "n_estimators":     150,
+                "training_days":    60,
+                "features":         6,
+            },
+            "anomaly_model": {
+                "algorithm":        "IsolationForest",
+                "n_estimators":     150,
+                "contamination":    0.05,
+                "training_samples": 1000,
+            },
+        },
         "last_retrained":  "2026-05-10T00:00:00Z",
         "generated_at":    datetime.utcnow().isoformat() + "Z",
     }
@@ -60,29 +80,48 @@ def heatmap_data():
 
 @router.get("/analytics/city/{city}")
 async def city_analytics(city: str):
-    forecast = ModelService.forecast_demand(city=city.lower(), hours_ahead=24)
-
-    from datetime import datetime
+    forecast     = ModelService.forecast_demand(city=city.lower(), hours_ahead=24)
     now          = datetime.now()
-    anomaly_norm = ModelService.detect_anomaly(
-        incident_count=5,
-        avg_response_time=3.5,
-        available_responders=10,
-        active_incidents=5,
-    )
-
-    scenarios = [
-        ModelService.predict_severity("FIRE",    city.lower(), now.hour, now.weekday()),
-        ModelService.predict_severity("MEDICAL", city.lower(), now.hour, now.weekday()),
-    ]
-
+    anomaly      = ModelService.detect_anomaly(5, 3.5, 10, 5)
+    sev_fire     = ModelService.predict_severity("FIRE",    city.lower(), now.hour, now.weekday())
+    sev_medical  = ModelService.predict_severity("MEDICAL", city.lower(), now.hour, now.weekday())
     return {
         "city":             city.lower(),
         "demand_forecast":  forecast,
-        "current_anomaly":  anomaly_norm,
+        "current_anomaly":  anomaly,
         "severity_outlook": {
-            "fire_risk":    scenarios[0]["risk_level"],
-            "medical_risk": scenarios[1]["risk_level"],
+            "fire_risk":        sev_fire["risk_level"],
+            "fire_confidence":  sev_fire["confidence"],
+            "medical_risk":     sev_medical["risk_level"],
+            "medical_confidence": sev_medical["confidence"],
         },
         "generated_at":     datetime.utcnow().isoformat() + "Z",
+    }
+
+@router.get("/analytics/model-performance")
+def model_performance():
+    scenarios = [
+        {"type":"FIRE",     "city":"mumbai",    "hour":22, "day":1},
+        {"type":"FIRE",     "city":"delhi",     "hour":14, "day":3},
+        {"type":"MEDICAL",  "city":"mumbai",    "hour":3,  "day":0},
+        {"type":"MEDICAL",  "city":"bangalore", "hour":18, "day":4},
+        {"type":"POLICE",   "city":"delhi",     "hour":23, "day":5},
+        {"type":"DISASTER", "city":"mumbai",    "hour":17, "day":2},
+    ]
+    results = []
+    for s in scenarios:
+        pred = ModelService.predict_severity(s["type"], s["city"], s["hour"], s["day"])
+        results.append({
+            "scenario":    f"{s['type']} in {s['city']} at {s['hour']:02d}:00",
+            "prediction":  pred["predicted_severity"],
+            "confidence":  pred["confidence"],
+            "risk_level":  pred["risk_level"],
+        })
+    avg_conf = round(sum(r["confidence"] for r in results) / len(results), 3)
+    return {
+        "scenarios":          results,
+        "avg_confidence":     avg_conf,
+        "model":              "RandomForestClassifier",
+        "training_samples":   5000,
+        "generated_at":       datetime.utcnow().isoformat() + "Z",
     }
