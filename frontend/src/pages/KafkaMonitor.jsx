@@ -1,311 +1,325 @@
 import { useQuery } from '@tanstack/react-query'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
-import { Activity, CheckCircle, AlertTriangle, RefreshCw, Layers, Clock } from 'lucide-react'
-import api from '../api/axios'
+import {
+  Activity, Zap, AlertTriangle, CheckCircle,
+  RefreshCw, Radio, BarChart2, Database,
+  Clock, ChevronRight, Layers, Server
+} from 'lucide-react'
 
-const TOPIC_DESCRIPTIONS = {
-  'emergency-events':      { desc: 'SOS incidents published by Emergency Service', partitions: 6, color: '#ef4444' },
-  'dispatch-updates':      { desc: 'Responder assignments from Dispatch Service',  partitions: 3, color: '#22c55e' },
-  'notifications':         { desc: 'SMS and push notification events',             partitions: 3, color: '#f59e0b' },
-  'emergency-events-dlt':  { desc: 'Dead letter queue for emergency events',       partitions: 3, color: '#6366f1' },
-  'dispatch-updates-dlt':  { desc: 'Dead letter queue for dispatch updates',       partitions: 3, color: '#6366f1' },
-}
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer, Cell
+} from 'recharts'
+import api from '../api/axios'
 
 function CustomTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null
   return (
-    <div className="bg-card border border-border rounded-lg px-3 py-2 shadow-xl">
+    <div className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 shadow-xl">
       <p className="text-xs font-semibold text-white mb-1">{label}</p>
-      <p className="text-xs text-muted">Lag: <span className="text-accent font-bold">{payload[0]?.value}</span></p>
+      {payload.map((p,i) => (
+        <p key={i} className="text-xs" style={{color:p.color}}>
+          {p.name}: <span className="font-bold">{p.value}</span>
+        </p>
+      ))}
+    </div>
+  )
+}
+
+function StatCard({ label, value, icon:Icon, color, sub, pulse }) {
+  return (
+    <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
+      <div className="flex items-center justify-between mb-3">
+        <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${color} bg-opacity-10`}>
+          <Icon className={`w-4.5 h-4.5 ${color.replace('bg-','text-')}`}/>
+        </div>
+        {pulse && <div className={`w-2 h-2 rounded-full ${color} animate-pulse`}/>}
+      </div>
+      <p className={`text-3xl font-bold ${color.replace('bg-','text-')} mb-0.5`}>{value ?? '--'}</p>
+      <p className="text-xs font-semibold text-slate-300">{label}</p>
+      {sub && <p className="text-xs text-slate-600 mt-0.5">{sub}</p>}
+    </div>
+  )
+}
+
+function TopicRow({ topic }) {
+  const isEmergency = topic.toLowerCase().includes('emergency')
+  const isDlt       = topic.toLowerCase().includes('dlt')
+  const isDispatch  = topic.toLowerCase().includes('dispatch')
+  const color = isDlt ? 'text-red-400' : isEmergency ? 'text-orange-400' : isDispatch ? 'text-green-400' : 'text-blue-400'
+  const bg    = isDlt ? 'bg-red-500'   : isEmergency ? 'bg-orange-500'   : isDispatch ? 'bg-green-500'   : 'bg-blue-500'
+  return (
+    <div className="flex items-center justify-between py-3 border-b border-slate-800 last:border-0 group hover:bg-slate-800 hover:bg-opacity-30 px-2 -mx-2 rounded transition-all">
+      <div className="flex items-center gap-3">
+        <div className={`w-1.5 h-1.5 rounded-full ${bg}`}/>
+        <span className={`text-sm font-mono font-medium ${color}`}>{topic}</span>
+        {isDlt && <span className="text-xs px-1.5 py-0.5 rounded bg-red-500 bg-opacity-10 text-red-400 border border-red-500 border-opacity-20">DLT</span>}
+      </div>
+      <div className="flex items-center gap-2 text-slate-600">
+        <div className={`w-1.5 h-1.5 rounded-full ${bg} animate-pulse`}/>
+        <span className="text-xs">Active</span>
+      </div>
+    </div>
+  )
+}
+
+function PartitionBar({ partition }) {
+  const lag = partition.lag ?? 0
+  const pct = partition.endOffset > 0 ? Math.round((partition.committedOffset / partition.endOffset)*100) : 100
+  return (
+    <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 rounded-lg bg-blue-500 bg-opacity-20 flex items-center justify-center">
+            <span className="text-xs font-bold text-blue-400">{partition.partition}</span>
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-white truncate max-w-36">{partition.topic}</p>
+            <p className="text-xs text-slate-600">Partition {partition.partition}</p>
+          </div>
+        </div>
+        <div className={`text-xs font-bold px-2 py-0.5 rounded-full border ${
+          lag===0
+            ? 'text-green-400 border-green-500 border-opacity-30 bg-green-500 bg-opacity-10'
+            : 'text-red-400 border-red-500 border-opacity-30 bg-red-500 bg-opacity-10'
+        }`}>
+          {lag===0 ? 'HEALTHY' : `LAG ${lag}`}
+        </div>
+      </div>
+      <div className="space-y-1.5">
+        <div className="flex justify-between text-xs mb-1">
+          <span className="text-slate-500">Consumed</span>
+          <span className="text-white font-medium">{pct}%</span>
+        </div>
+        <div className="h-1.5 bg-slate-700 rounded-full overflow-hidden">
+          <div className={`h-full rounded-full transition-all duration-700 ${lag===0?'bg-green-500':'bg-red-500'}`} style={{width:pct+'%'}}/>
+        </div>
+        <div className="grid grid-cols-2 gap-2 mt-2">
+          <div><p className="text-xs text-slate-600">Committed</p><p className="text-xs font-mono text-white">{partition.committedOffset}</p></div>
+          <div><p className="text-xs text-slate-600">End Offset</p><p className="text-xs font-mono text-white">{partition.endOffset}</p></div>
+        </div>
+      </div>
     </div>
   )
 }
 
 export default function KafkaMonitor() {
-  const { data: lagData, isLoading: lagLoading, refetch, dataUpdatedAt } = useQuery({
+  const { data:lag, isLoading:lagLoading, refetch, dataUpdatedAt } = useQuery({
     queryKey: ['kafka-lag'],
-    queryFn: () => api.get('/api/monitoring/kafka/lag').then(r => r.data),
-    refetchInterval: 8000,
+    queryFn:  () => api.get('/api/monitoring/kafka/lag').then(r => r.data),
+    refetchInterval: 5000,
   })
-
-  const { data: topicsData, isLoading: topicsLoading } = useQuery({
+  const { data:topics, isLoading:topicsLoading } = useQuery({
     queryKey: ['kafka-topics'],
-    queryFn: () => api.get('/api/monitoring/kafka/topics').then(r => r.data),
-    refetchInterval: 30000,
+    queryFn:  () => api.get('/api/monitoring/kafka/topics').then(r => r.data),
+    refetchInterval: 15000,
   })
 
-  const overallStatus  = lagData?.overallStatus ?? 'CHECKING'
-  const consumerGroups = lagData?.consumerGroups ?? []
-  const topics         = topicsData?.topics ?? []
-  const lastUpdate     = dataUpdatedAt ? new Date(dataUpdatedAt).toLocaleTimeString() : '--'
+  const groups     = lag?.consumerGroups ?? []
+  const topicList  = topics?.topics ? [...topics.topics].sort() : []
+  const allHealthy = lag?.overallStatus === 'HEALTHY'
+  const totalLag   = groups.reduce((s,g) => s+(g.totalLag??0), 0)
+  const totalParts = groups.reduce((s,g) => s+(g.partitions?.length??0), 0)
+  const lastSync   = dataUpdatedAt ? new Date(dataUpdatedAt).toLocaleTimeString() : '--'
 
-  // Build chart data per group
-  const chartData = consumerGroups.map(g => ({
-    name: g.groupId === 'dispatch-service-group' ? 'Dispatch Service'
-        : g.groupId === 'dispatch-dlt-group'     ? 'Dispatch DLT'
-        : g.groupId,
-    lag:    g.totalLag ?? 0,
-    status: g.status,
-  }))
-
-  // Build partition lag chart
-  const partitionData = consumerGroups.flatMap(g =>
-    (g.partitions ?? []).map(p => ({
-      name: p.topic.replace('emergency-events', 'emg').replace('dispatch-updates', 'dsp') + '-' + p.partition,
-      lag:  p.lag,
-      committed: p.committedOffset,
-      end:  p.endOffset,
+  const lagChartData = groups.flatMap(g =>
+    (g.partitions??[]).map(p => ({
+      name:   `${g.groupId.split('-')[0]}.P${p.partition}`,
+      lag:    p.lag ?? 0,
+      offset: p.committedOffset ?? 0,
     }))
   )
 
-  const totalMessages = consumerGroups.reduce((sum, g) =>
-    sum + (g.partitions ?? []).reduce((s, p) => s + p.endOffset, 0), 0)
-
-  const totalLag = consumerGroups.reduce((sum, g) => sum + (g.totalLag ?? 0), 0)
+  const offsetChartData = groups.flatMap(g =>
+    (g.partitions??[]).map(p => ({
+      name:       `${p.topic?.split('-')[0] ?? ''}.P${p.partition}`,
+      committed:  p.committedOffset ?? 0,
+      end:        p.endOffset ?? 0,
+    }))
+  )
 
   return (
     <div className="space-y-5">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-white">Kafka Monitor</h1>
-          <p className="text-muted text-sm mt-0.5">Real-time consumer lag and pipeline health · Last updated {lastUpdate}</p>
+          <h1 className="text-2xl font-bold text-white tracking-tight">Kafka Pipeline Monitor</h1>
+          <p className="text-slate-500 text-sm mt-0.5">
+            Event streaming health · Consumer group lag · Partition offsets
+            <span className="text-slate-600 ml-2">· synced {lastSync}</span>
+          </p>
         </div>
         <div className="flex items-center gap-3">
-          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-semibold ${
-            overallStatus === 'HEALTHY'
-              ? 'bg-success bg-opacity-10 border-success border-opacity-30 text-success'
-              : overallStatus === 'CHECKING'
-              ? 'bg-muted bg-opacity-10 border-muted border-opacity-30 text-muted'
-              : 'bg-danger bg-opacity-10 border-danger border-opacity-30 text-danger'
+          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-bold ${
+            allHealthy
+              ? 'bg-green-500 bg-opacity-10 border-green-500 border-opacity-30 text-green-400'
+              : 'bg-red-500 bg-opacity-10 border-red-500 border-opacity-30 text-red-400'
           }`}>
-            <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${
-              overallStatus === 'HEALTHY' ? 'bg-success' : 'bg-danger'
-            }`} />
-            {overallStatus}
+            <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${allHealthy?'bg-green-400':'bg-red-400'}`}/>
+            {allHealthy ? 'Pipeline Healthy' : 'Pipeline Lagging'}
           </div>
-          <button onClick={() => refetch()}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-muted hover:text-white text-sm transition-all hover:border-accent hover:border-opacity-40">
-            <RefreshCw className="w-3.5 h-3.5" />Refresh
+          <button onClick={()=>refetch()}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-700 text-slate-400 hover:text-white text-sm transition-all hover:border-slate-500">
+            <RefreshCw className="w-3.5 h-3.5"/>Refresh
           </button>
         </div>
       </div>
 
-      {/* Top stat cards */}
+      {/* Stats */}
       <div className="grid grid-cols-4 gap-4">
-        {[
-          {
-            label: 'Pipeline Status',
-            value: overallStatus,
-            icon: overallStatus === 'HEALTHY' ? CheckCircle : AlertTriangle,
-            color: overallStatus === 'HEALTHY' ? 'text-success' : 'text-danger',
-            bg:    overallStatus === 'HEALTHY' ? 'bg-success'   : 'bg-danger',
-            sub:   'Overall health',
-          },
-          {
-            label: 'Consumer Groups',
-            value: consumerGroups.length,
-            icon: Activity,
-            color: 'text-accent',
-            bg:    'bg-accent',
-            sub:   'Active groups',
-          },
-          {
-            label: 'Total Lag',
-            value: totalLag,
-            icon: Clock,
-            color: totalLag === 0 ? 'text-success' : 'text-warning',
-            bg:    totalLag === 0 ? 'bg-success'   : 'bg-warning',
-            sub:   'Messages behind',
-          },
-          {
-            label: 'Topics',
-            value: topics.length,
-            icon: Layers,
-            color: 'text-accent',
-            bg:    'bg-accent',
-            sub:   'Kafka topics',
-          },
-        ].map(({ label, value, icon: Icon, color, bg, sub }) => (
-          <div key={label} className="bg-card border border-border rounded-xl p-5">
-            <div className="flex items-center justify-between mb-3">
-              <div className={`w-9 h-9 rounded-lg ${bg} bg-opacity-10 flex items-center justify-center`}>
-                <Icon className={`w-4 h-4 ${color}`} />
-              </div>
-            </div>
-            <p className={`text-2xl font-bold ${color} mb-0.5`}>{lagLoading ? '--' : value}</p>
-            <p className="text-sm font-medium text-slate-300">{label}</p>
-            <p className="text-xs text-muted mt-0.5">{sub}</p>
-          </div>
-        ))}
+        <StatCard label="Consumer Groups"  value={groups.length}  icon={Layers}    color="bg-blue-500"   sub="Active groups"       pulse/>
+        <StatCard label="Total Lag"        value={totalLag}       icon={AlertTriangle} color={totalLag===0?"bg-green-500":"bg-red-500"} sub="Messages behind" pulse={totalLag>0}/>
+        <StatCard label="Partitions"       value={totalParts}     icon={BarChart2} color="bg-purple-500" sub="Being consumed"/>
+        <StatCard label="Kafka Topics"     value={topicList.length} icon={Database} color="bg-amber-500" sub="Active topics"/>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        {/* Consumer Group Lag Chart */}
-        <div className="bg-card border border-border rounded-xl p-5">
-          <h3 className="text-sm font-semibold text-white mb-1">Consumer Group Lag</h3>
-          <p className="text-xs text-muted mb-4">Messages pending consumption per group</p>
+      {/* Consumer groups + topics */}
+      <div className="grid grid-cols-3 gap-4">
+        {/* Consumer Groups */}
+        <div className="col-span-2 space-y-4">
           {lagLoading ? (
-            <div className="h-48 bg-subtle rounded animate-pulse" />
-          ) : (
-            <ResponsiveContainer width="100%" height={180}>
-              <BarChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 4 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e2d45" vertical={false} />
-                <XAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} />
-                <Tooltip content={<CustomTooltip />} cursor={{ fill: '#1e2d4520' }} />
-                <Bar dataKey="lag" radius={[4, 4, 0, 0]} maxBarSize={48}>
-                  {chartData.map((entry, i) => (
-                    <Cell key={i} fill={entry.lag === 0 ? '#22c55e' : '#ef4444'} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </div>
-
-        {/* Consumer Group Details */}
-        <div className="bg-card border border-border rounded-xl p-5">
-          <h3 className="text-sm font-semibold text-white mb-1">Consumer Groups</h3>
-          <p className="text-xs text-muted mb-4">Detailed status per consumer group</p>
-          {lagLoading ? (
-            <div className="space-y-3">
-              {[1,2].map(i => <div key={i} className="h-16 bg-subtle rounded animate-pulse" />)}
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {consumerGroups.map(g => {
-                const isHealthy  = g.status === 'HEALTHY'
-                const partitions = g.partitions ?? []
-                const maxLag     = Math.max(...partitions.map(p => p.lag), 0)
-                return (
-                  <div key={g.groupId} className={`rounded-lg border p-3 ${
-                    isHealthy ? 'border-success border-opacity-20 bg-success bg-opacity-5' : 'border-danger border-opacity-20 bg-danger bg-opacity-5'
-                  }`}>
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <div className={`w-2 h-2 rounded-full ${isHealthy ? 'bg-success' : 'bg-danger'} animate-pulse`} />
-                        <p className="text-xs font-semibold text-white">{g.groupId}</p>
-                      </div>
-                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                        isHealthy
-                          ? 'bg-success bg-opacity-15 text-success'
-                          : 'bg-danger bg-opacity-15 text-danger'
-                      }`}>{g.status}</span>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2">
-                      <div>
-                        <p className="text-xs text-muted">Total Lag</p>
-                        <p className={`text-sm font-bold ${isHealthy ? 'text-success' : 'text-danger'}`}>{g.totalLag}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted">Partitions</p>
-                        <p className="text-sm font-bold text-white">{partitions.length}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted">Max Lag</p>
-                        <p className="text-sm font-bold text-white">{maxLag}</p>
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Partition Detail Table */}
-      <div className="bg-card border border-border rounded-xl overflow-hidden">
-        <div className="px-5 py-4 border-b border-border flex items-center justify-between">
-          <div>
-            <h3 className="text-sm font-semibold text-white">Partition Offsets</h3>
-            <p className="text-xs text-muted mt-0.5">Per-partition committed vs end offsets</p>
-          </div>
-          <span className="text-xs text-muted">{partitionData.length} partitions</span>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-border bg-subtle">
-                {['Partition', 'Committed Offset', 'End Offset', 'Lag', 'Status'].map(h => (
-                  <th key={h} className="px-5 py-3 text-left text-xs font-semibold text-muted uppercase tracking-wider">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {lagLoading ? (
-                [...Array(4)].map((_, i) => (
-                  <tr key={i} className="border-b border-border">
-                    {[...Array(5)].map((_, j) => (
-                      <td key={j} className="px-5 py-3"><div className="h-4 bg-subtle rounded animate-pulse" /></td>
-                    ))}
-                  </tr>
-                ))
-              ) : partitionData.length === 0 ? (
-                <tr><td colSpan={5} className="px-5 py-8 text-center text-muted text-sm">No partition data available</td></tr>
-              ) : (
-                partitionData.map((p, i) => (
-                  <tr key={i} className="border-b border-border hover:bg-subtle transition-colors">
-                    <td className="px-5 py-3">
-                      <span className="text-xs font-mono text-slate-300">{p.name}</span>
-                    </td>
-                    <td className="px-5 py-3">
-                      <span className="text-sm text-slate-300">{p.committed}</span>
-                    </td>
-                    <td className="px-5 py-3">
-                      <span className="text-sm text-slate-300">{p.end}</span>
-                    </td>
-                    <td className="px-5 py-3">
-                      <span className={`text-sm font-semibold ${p.lag === 0 ? 'text-success' : 'text-danger'}`}>{p.lag}</span>
-                    </td>
-                    <td className="px-5 py-3">
-                      <div className="flex items-center gap-1.5">
-                        <div className={`w-1.5 h-1.5 rounded-full ${p.lag === 0 ? 'bg-success' : 'bg-danger'}`} />
-                        <span className={`text-xs font-medium ${p.lag === 0 ? 'text-success' : 'text-danger'}`}>
-                          {p.lag === 0 ? 'Caught up' : 'Behind'}
-                        </span>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Topics Grid */}
-      <div className="bg-card border border-border rounded-xl p-5">
-        <h3 className="text-sm font-semibold text-white mb-1">Kafka Topics</h3>
-        <p className="text-xs text-muted mb-4">All topics in the ResQNet cluster</p>
-        {topicsLoading ? (
-          <div className="grid grid-cols-3 gap-3">
-            {[1,2,3].map(i => <div key={i} className="h-20 bg-subtle rounded animate-pulse" />)}
-          </div>
-        ) : (
-          <div className="grid grid-cols-3 gap-3">
-            {[...topics].sort().map(topic => {
-              const meta = TOPIC_DESCRIPTIONS[topic]
-              return (
-                <div key={topic} className="border border-border rounded-lg p-3 hover:border-accent hover:border-opacity-30 transition-all">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div style={{ width:8, height:8, borderRadius:'50%', background: meta?.color ?? '#64748b', flexShrink:0 }} />
-                    <p className="text-xs font-semibold text-white truncate">{topic}</p>
-                  </div>
-                  <p className="text-xs text-muted mb-2 leading-relaxed">{meta?.desc ?? 'Kafka topic'}</p>
+            <div className="h-48 bg-slate-900 border border-slate-800 rounded-xl animate-pulse"/>
+          ) : groups.map(group => {
+            const healthy  = group.status === 'HEALTHY'
+            const groupLag = group.totalLag ?? 0
+            return (
+              <div key={group.groupId} className={`bg-slate-900 border rounded-xl overflow-hidden ${
+                healthy ? 'border-slate-800' : 'border-red-500 border-opacity-20'
+              }`}>
+                <div className={`px-5 py-4 border-b flex items-center justify-between ${
+                  healthy ? 'border-slate-800 bg-black bg-opacity-20' : 'border-red-500 border-opacity-20 bg-red-500 bg-opacity-5'
+                }`}>
                   <div className="flex items-center gap-3">
-                    <span className="text-xs text-slate-400">
-                      <span className="text-muted">Partitions: </span>
-                      <span className="font-semibold">{meta?.partitions ?? '?'}</span>
-                    </span>
+                    <div className={`w-2.5 h-2.5 rounded-full ${healthy?'bg-green-400 animate-pulse':'bg-red-400'}`}/>
+                    <div>
+                      <p className="text-sm font-bold text-white">
+                        {group.groupId==='dispatch-service-group' ? 'Dispatch Consumer Group' : 'Dead Letter Topic Group'}
+                      </p>
+                      <p className="text-xs font-mono text-slate-500">{group.groupId}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="text-right">
+                      <p className={`text-lg font-bold ${groupLag===0?'text-green-400':'text-red-400'}`}>{groupLag}</p>
+                      <p className="text-xs text-slate-600">total lag</p>
+                    </div>
+                    <div className={`px-3 py-1 rounded-full text-xs font-bold border ${
+                      healthy
+                        ? 'text-green-400 border-green-500 border-opacity-30 bg-green-500 bg-opacity-10'
+                        : 'text-red-400 border-red-500 border-opacity-30 bg-red-500 bg-opacity-10'
+                    }`}>{group.status}</div>
                   </div>
                 </div>
-              )
-            })}
+                <div className="p-4 grid grid-cols-2 gap-3">
+                  {(group.partitions??[]).map((p,i) => <PartitionBar key={i} partition={p}/>)}
+                  {(!group.partitions || group.partitions.length===0) && (
+                    <div className="col-span-2 py-8 text-center">
+                      <Radio className="w-6 h-6 text-slate-700 mx-auto mb-2"/>
+                      <p className="text-xs text-slate-600">No partition data — Kafka may be initializing</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+          {!lagLoading && groups.length===0 && (
+            <div className="bg-slate-900 border border-slate-800 rounded-xl py-16 text-center">
+              <Server className="w-8 h-8 text-slate-700 mx-auto mb-3"/>
+              <p className="text-white font-medium text-sm mb-1">No consumer group data</p>
+              <p className="text-slate-600 text-xs">Kafka broker may be starting up</p>
+            </div>
+          )}
+        </div>
+
+        {/* Topics + pipeline info */}
+        <div className="space-y-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <Database className="w-4 h-4 text-amber-400"/>
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider">Kafka Topics</h3>
+            </div>
+            {topicsLoading ? (
+              <div className="space-y-2">{[...Array(4)].map((_,i)=><div key={i} className="h-8 bg-slate-800 rounded animate-pulse"/>)}</div>
+            ) : topicList.length===0 ? (
+              <p className="text-xs text-slate-600 py-4 text-center">No topics found</p>
+            ) : (
+              <div>{topicList.map(t=><TopicRow key={t} topic={t}/>)}</div>
+            )}
           </div>
-        )}
+
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <Activity className="w-4 h-4 text-blue-400"/>
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider">Pipeline Config</h3>
+            </div>
+            <div className="space-y-3">
+              {[
+                {label:'Broker',       value:'localhost:9092'},
+                {label:'Version',      value:'Kafka 3.7.1'  },
+                {label:'Partitions',   value:'6 (emergency-events)'},
+                {label:'Replication',  value:'Factor 1'     },
+                {label:'DLT Strategy', value:'Auto-retry x3'},
+                {label:'Commit Mode',  value:'Auto-commit'  },
+              ].map(({label,value}) => (
+                <div key={label} className="flex items-center justify-between py-1.5 border-b border-slate-800 last:border-0">
+                  <span className="text-xs text-slate-500">{label}</span>
+                  <span className="text-xs font-mono font-medium text-slate-300">{value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
+
+      {/* Lag Chart */}
+      {lagChartData.length > 0 && (
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider">Consumer Lag by Partition</h3>
+              <p className="text-xs text-slate-500 mt-0.5">Messages behind per partition · 0 = fully consumed</p>
+            </div>
+            <div className={`flex items-center gap-1.5 text-xs font-bold ${allHealthy?'text-green-400':'text-red-400'}`}>
+              <div className={`w-1.5 h-1.5 rounded-full ${allHealthy?'bg-green-400':'bg-red-400'} animate-pulse`}/>
+              {allHealthy ? 'All caught up' : `${totalLag} messages behind`}
+            </div>
+          </div>
+          <ResponsiveContainer width="100%" height={180}>
+            <BarChart data={lagChartData} margin={{top:4,right:4,left:-20,bottom:4}}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false}/>
+              <XAxis dataKey="name" tick={{fill:'#475569',fontSize:10}} axisLine={false} tickLine={false}/>
+              <YAxis tick={{fill:'#475569',fontSize:10}} axisLine={false} tickLine={false}/>
+              <Tooltip content={<CustomTooltip/>} cursor={{fill:'#1e293b80'}}/>
+              <Bar dataKey="lag" radius={[4,4,0,0]} maxBarSize={48} name="Lag">
+                {lagChartData.map((d,i)=>(
+                  <Cell key={i} fill={d.lag===0?'#22c55e':'#ef4444'}/>
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      {/* Offset Chart */}
+      {offsetChartData.length > 0 && (
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider">Committed vs End Offsets</h3>
+              <p className="text-xs text-slate-500 mt-0.5">Blue = committed · Purple = end offset</p>
+            </div>
+          </div>
+          <ResponsiveContainer width="100%" height={180}>
+            <BarChart data={offsetChartData} margin={{top:4,right:4,left:-20,bottom:4}}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false}/>
+              <XAxis dataKey="name" tick={{fill:'#475569',fontSize:10}} axisLine={false} tickLine={false}/>
+              <YAxis tick={{fill:'#475569',fontSize:10}} axisLine={false} tickLine={false}/>
+              <Tooltip content={<CustomTooltip/>} cursor={{fill:'#1e293b80'}}/>
+              <Bar dataKey="committed" fill="#3b82f6" radius={[4,4,0,0]} maxBarSize={32} name="Committed"/>
+              <Bar dataKey="end"       fill="#8b5cf6" radius={[4,4,0,0]} maxBarSize={32} name="End Offset"/>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
     </div>
   )
 }
