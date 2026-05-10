@@ -231,11 +231,10 @@ export default function Layout() {
             </div>
 
             {/* Bell */}
-            <button className="relative text-slate-500 hover:text-white transition-colors">
-              <Bell className="w-4 h-4" />
+            <button onClick={() => navigate("/incidents")} onClick={() => navigate("/incidents")} className="relative text-slate-500 hover:text-white transition-colors"><Bell className="w-4 h-4" />
               {pending > 0 && (
                 <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-red-500 flex items-center justify-center">
-                  <span className="text-white font-bold" style={{fontSize:'7px'}}>{pending}</span>
+                  <span className="text-white font-bold" style={{fontSize:"7px"}}>{pending}</span>
                 </div>
               )}
             </button>
