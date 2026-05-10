@@ -18,6 +18,7 @@ const navItems = [
   { to: '/monitoring', icon: Activity,        label: 'Kafka Monitor'          },
   { to: '/health',     icon: Shield,          label: 'Service Health'         },
   { to: '/ai',          icon: Brain,           label: 'AI Insights'            },
+  { to: '/ai/events',   icon: Activity,        label: 'AI Event Feed'          },
 ]
 
 export default function Layout() {
