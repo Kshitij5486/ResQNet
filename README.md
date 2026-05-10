@@ -1,4 +1,4 @@
-# ResQNet — AI-Powered Distributed Emergency Response Platform
+﻿# ResQNet — AI-Powered Distributed Emergency Response Platform
 
 <div align="center">
 
