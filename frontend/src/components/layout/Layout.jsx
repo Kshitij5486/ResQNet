@@ -1,168 +1,249 @@
-import { useState } from 'react'
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { Outlet, NavLink, useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import {
   LayoutDashboard, AlertTriangle, Users, Map,
-  Activity, Shield, LogOut, Bell, ChevronRight, X, Brain
+  Activity, Shield, LogOut, Bell, Brain,
+  Zap, Radio, ChevronRight, Siren, Database,
+  Menu, X
 } from 'lucide-react'
 import useAuthStore from '../../store/authStore'
-import toast from 'react-hot-toast'
-import { useEffect } from 'react'
-import { useLocation } from 'react-router-dom'
-import RealtimeStatusBar from '../ui/RealtimeStatusBar'
+import api from '../../api/axios'
 
-const navItems = [
-  { to: '/',           icon: LayoutDashboard, label: 'Dashboard',     end: true },
-  { to: '/incidents',  icon: AlertTriangle,   label: 'Incidents'              },
-  { to: '/responders', icon: Users,           label: 'Responders'             },
-  { to: '/map',        icon: Map,             label: 'Live Map'               },
-  { to: '/monitoring', icon: Activity,        label: 'Kafka Monitor'          },
-  { to: '/health',     icon: Shield,          label: 'Service Health'         },
-  { to: '/ai',          icon: Brain,           label: 'AI Insights'            },
-  { to: '/ai/events',   icon: Activity,        label: 'AI Event Feed'          },
+const NAV = [
+  { to:'/',            icon:LayoutDashboard, label:'Dashboard',     sub:'Operations center'  },
+  { to:'/incidents',   icon:Siren,           label:'Incidents',     sub:'SOS management'     },
+  { to:'/responders',  icon:Users,           label:'Responders',    sub:'Unit tracker'       },
+  { to:'/map',         icon:Map,             label:'Live Map',      sub:'GPS + heatmap'      },
+  { to:'/monitoring',  icon:Activity,        label:'Kafka Monitor', sub:'Pipeline health'    },
+  { to:'/health',      icon:Shield,          label:'Service Health',sub:'System status'      },
+  { to:'/ai',          icon:Brain,           label:'AI Insights',   sub:'ML predictions'     },
+  { to:'/ai/events',   icon:Zap,             label:'AI Event Feed', sub:'Real-time events'   },
 ]
 
 export default function Layout() {
-  const { logout } = useAuthStore()
-  const location = useLocation()
+  const { user, logout } = useAuthStore()
+  const navigate = useNavigate()
+  const [collapsed, setCollapsed] = useState(false)
+  const [time, setTime] = useState(new Date())
 
   useEffect(() => {
-    const titles = {
-      '/':           'Dashboard — ResQNet',
-      '/incidents':  'Incidents — ResQNet',
-      '/responders': 'Responders — ResQNet',
-      '/map':        'Live Map — ResQNet',
-      '/monitoring': 'Kafka Monitor — ResQNet',
-      '/health':     'Service Health — ResQNet',
-    }
-    document.title = titles[location.pathname] || 'ResQNet'
-  }, [location.pathname])
-  const navigate   = useNavigate()
-  const [showNotif, setShowNotif] = useState(false)
+    const t = setInterval(() => setTime(new Date()), 1000)
+    return () => clearInterval(t)
+  }, [])
 
-  const handleLogout = () => {
-    logout()
-    toast.success('Signed out successfully')
-    navigate('/login')
-  }
+  const { data: kafka } = useQuery({
+    queryKey: ['layout-kafka'],
+    queryFn:  () => api.get('/api/monitoring/kafka/lag').then(r => r.data),
+    refetchInterval: 8000,
+  })
+  const { data: incidents } = useQuery({
+    queryKey: ['layout-incidents'],
+    queryFn:  () => api.get('/api/incidents/my').then(r => r.data),
+    refetchInterval: 10000,
+  })
+
+  const kafkaOk    = kafka?.overallStatus === 'HEALTHY'
+  const totalLag   = (kafka?.consumerGroups ?? []).reduce((s,g) => s+(g.totalLag??0), 0)
+  const incList    = Array.isArray(incidents) ? incidents : []
+  const pending    = incList.filter(i => i.status === 'REPORTED').length
+  const critical   = incList.filter(i => i.severity >= 4).length
+
+  const handleLogout = () => { logout(); navigate('/login') }
 
   return (
-    <div className="flex h-screen bg-background overflow-hidden">
+    <div className="flex h-screen bg-slate-950 overflow-hidden">
+
       {/* Sidebar */}
-      <aside className="w-60 bg-surface border-r border-border flex flex-col flex-shrink-0">
-        <div className="px-5 py-5 border-b border-border">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-accent bg-opacity-15 rounded-lg flex items-center justify-center border border-accent border-opacity-20">
-              <Shield className="w-4 h-4 text-accent" />
-            </div>
-            <div>
-              <h1 className="text-white font-bold text-sm tracking-wide">ResQNet</h1>
-              <p className="text-muted text-xs">Emergency Response</p>
-            </div>
+      <aside className={`flex flex-col bg-slate-900 border-r border-slate-800 transition-all duration-300 flex-shrink-0 ${
+        collapsed ? 'w-16' : 'w-56'
+      }`}>
+
+        {/* Logo */}
+        <div className={`flex items-center border-b border-slate-800 flex-shrink-0 ${collapsed ? 'px-3 py-4 justify-center' : 'px-4 py-4 gap-3'}`}>
+          <div className="w-8 h-8 rounded-xl bg-red-600 flex items-center justify-center flex-shrink-0">
+            <Siren className="w-4 h-4 text-white" />
           </div>
+          {!collapsed && (
+            <div>
+              <p className="text-white font-black text-sm tracking-tight">ResQNet</p>
+              <p className="text-slate-600 text-xs">Emergency Response</p>
+            </div>
+          )}
         </div>
 
-        <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-          <p className="text-xs font-semibold text-muted uppercase tracking-wider px-3 mb-3">Navigation</p>
-          {navItems.map(({ to, icon: Icon, label, end }) => (
-            <NavLink key={to} to={to} end={end}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all group ${
-                  isActive
-                    ? 'bg-accent bg-opacity-10 text-accent border border-accent border-opacity-15'
-                    : 'text-muted hover:text-white hover:bg-subtle'
-                }`
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-accent' : 'text-muted group-hover:text-white'}`} />
-                  <span className="flex-1">{label}</span>
-                  {isActive && <ChevronRight className="w-3 h-3 text-accent" />}
-                </>
-              )}
-            </NavLink>
-          ))}
-        </nav>
-
-        <div className="px-3 py-4 border-t border-border">
-          <div className="flex items-center gap-3 px-3 py-2.5 mb-1">
-            <div className="w-7 h-7 rounded-full bg-accent bg-opacity-20 flex items-center justify-center text-xs font-bold text-accent flex-shrink-0">K</div>
-            <div className="flex-1 min-w-0">
-              <p className="text-white text-xs font-medium truncate">Kshitij</p>
-              <p className="text-muted text-xs">Operator</p>
+        {/* Status pill */}
+        {!collapsed && (
+          <div className="mx-3 mt-3 px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 flex items-center gap-2">
+            <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${kafkaOk ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`} />
+            <div className="min-w-0">
+              <p className="text-xs font-bold text-white truncate">
+                {kafkaOk ? 'All Systems Go' : 'System Alert'}
+              </p>
+              <p className="text-xs text-slate-500">
+                Lag: {totalLag} · {pending} pending
+              </p>
             </div>
           </div>
+        )}
+
+        {/* Nav */}
+        <nav className="flex-1 overflow-y-auto py-3 space-y-0.5 px-2">
+          {!collapsed && (
+            <p className="text-xs font-bold text-slate-600 uppercase tracking-widest px-2 py-2">Navigation</p>
+          )}
+          {NAV.map(({ to, icon: Icon, label, sub }) => {
+            const badge = label === 'Incidents' && pending > 0 ? pending : null
+            const alert = label === 'Incidents' && critical > 0
+            return (
+              <NavLink key={to} to={to} end={to==='/'}
+                className={({ isActive }) =>
+                  `flex items-center rounded-lg transition-all duration-150 group relative ${
+                    collapsed ? 'justify-center px-2 py-3' : 'gap-3 px-3 py-2.5'
+                  } ${isActive
+                    ? 'bg-blue-600 bg-opacity-20 text-blue-400 border border-blue-500 border-opacity-30'
+                    : 'text-slate-500 hover:text-white hover:bg-slate-800'
+                  }`
+                }>
+                {({ isActive }) => (
+                  <>
+                    <div className="relative flex-shrink-0">
+                      <Icon className={`w-4 h-4 transition-colors ${isActive ? 'text-blue-400' : 'text-slate-500 group-hover:text-white'}`} />
+                      {badge && (
+                        <div className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 rounded-full bg-red-500 flex items-center justify-center">
+                          <span className="text-white text-xs font-bold" style={{fontSize:'8px'}}>{badge>9?'9+':badge}</span>
+                        </div>
+                      )}
+                    </div>
+                    {!collapsed && (
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between">
+                          <p className={`text-xs font-semibold truncate ${isActive ? 'text-blue-400' : 'text-slate-300 group-hover:text-white'}`}>{label}</p>
+                          {badge && <span className="text-xs font-bold text-red-400 flex-shrink-0">{badge}</span>}
+                        </div>
+                        <p className="text-xs text-slate-600 truncate">{sub}</p>
+                      </div>
+                    )}
+                    {isActive && !collapsed && (
+                      <ChevronRight className="w-3 h-3 text-blue-400 flex-shrink-0" />
+                    )}
+                    {collapsed && (
+                      <div className="absolute left-full ml-2 px-2 py-1 bg-slate-800 border border-slate-700 rounded-lg text-xs text-white whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+                        {label}
+                      </div>
+                    )}
+                  </>
+                )}
+              </NavLink>
+            )
+          })}
+        </nav>
+
+        {/* Bottom */}
+        <div className="border-t border-slate-800 p-2 space-y-1 flex-shrink-0">
+          {!collapsed && (
+            <div className="px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 mb-2">
+              <div className="flex items-center gap-2 mb-1.5">
+                <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
+                  <span className="text-white text-xs font-bold">{user?.name?.charAt(0)??'K'}</span>
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-white truncate">{user?.name ?? 'Kshitij'}</p>
+                  <p className="text-xs text-slate-500 truncate">{user?.email ?? 'operator'}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
+                <span className="text-xs text-slate-500">Operator · Online</span>
+              </div>
+            </div>
+          )}
+          <button onClick={() => setCollapsed(c => !c)}
+            className={`w-full flex items-center rounded-lg py-2 text-slate-500 hover:text-white hover:bg-slate-800 transition-all ${
+              collapsed ? 'justify-center px-2' : 'gap-2 px-3'
+            }`}>
+            {collapsed ? <Menu className="w-4 h-4" /> : <><X className="w-4 h-4" /><span className="text-xs">Collapse</span></>}
+          </button>
           <button onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-muted hover:text-danger hover:bg-danger hover:bg-opacity-10 transition-all">
-            <LogOut className="w-4 h-4" />Sign out
+            className={`w-full flex items-center rounded-lg py-2 text-slate-500 hover:text-red-400 hover:bg-red-500 hover:bg-opacity-10 transition-all ${
+              collapsed ? 'justify-center px-2' : 'gap-2 px-3'
+            }`}>
+            <LogOut className="w-4 h-4 flex-shrink-0" />
+            {!collapsed && <span className="text-xs font-medium">Sign out</span>}
           </button>
         </div>
       </aside>
 
       {/* Main */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Topbar */}
-        <header className="h-14 bg-surface border-b border-border flex items-center justify-between px-6 flex-shrink-0">
+
+        {/* Top bar */}
+        <header className="flex-shrink-0 bg-slate-900 border-b border-slate-800 px-6 py-3 flex items-center justify-between">
           <div>
-            <h2 className="text-white font-semibold text-sm">Emergency Operations Center</h2>
-            <p className="text-muted text-xs">Real-time monitoring and dispatch</p>
+            <p className="text-white font-bold text-sm">Emergency Operations Center</p>
+            <p className="text-slate-500 text-xs">Real-time monitoring and dispatch</p>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5 bg-success bg-opacity-10 border border-success border-opacity-20 rounded-full px-3 py-1">
-              <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
-              <span className="text-success text-xs font-medium">All Systems Operational</span>
+          <div className="flex items-center gap-5">
+            {/* Live indicators */}
+            <div className="flex items-center gap-4 text-xs">
+              <div className="flex items-center gap-1.5">
+                <Radio className="w-3 h-3 text-blue-400" />
+                <span className="text-slate-400">Connected</span>
+              </div>
+              <div className="text-slate-700">|</div>
+              <div className="flex items-center gap-1.5">
+                <div className={`w-1.5 h-1.5 rounded-full ${kafkaOk ? 'bg-green-400' : 'bg-red-400 animate-pulse'}`} />
+                <span className="text-slate-400">Kafka: <span className={`font-bold ${kafkaOk?'text-green-400':'text-red-400'}`}>{kafkaOk?'HEALTHY':'LAGGING'}</span></span>
+              </div>
+              <div className="text-slate-700">|</div>
+              <div className="flex items-center gap-1.5">
+                <Activity className="w-3 h-3 text-slate-500" />
+                <span className="text-slate-400">Lag: <span className="font-bold text-white">{totalLag}</span></span>
+              </div>
+              <div className="text-slate-700">|</div>
+              <div className="flex items-center gap-1.5">
+                <Siren className="w-3 h-3 text-slate-500" />
+                <span className="text-slate-400">Incidents: <span className="font-bold text-white">{incList.length || '--'}</span></span>
+              </div>
             </div>
-            <div className="relative">
-              <button onClick={() => setShowNotif(!showNotif)}
-                className="relative w-8 h-8 flex items-center justify-center rounded-lg bg-subtle border border-border text-muted hover:text-white hover:border-accent hover:border-opacity-40 transition-all">
-                <Bell className="w-4 h-4" />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-danger rounded-full border-2 border-surface" />
-              </button>
-              {showNotif && (
-                <div className="absolute right-0 top-10 w-72 bg-card border border-border rounded-xl shadow-2xl z-50">
-                  <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-                    <p className="text-sm font-semibold text-white">Notifications</p>
-                    <button onClick={() => setShowNotif(false)} className="text-muted hover:text-white transition-colors">
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                  <div className="p-3 space-y-2">
-                    <div className="flex items-start gap-3 p-2.5 rounded-lg bg-subtle">
-                      <div className="w-2 h-2 rounded-full bg-success mt-1.5 flex-shrink-0" />
-                      <div>
-                        <p className="text-xs font-medium text-white">All systems operational</p>
-                        <p className="text-xs text-muted mt-0.5">Kafka pipeline healthy · Lag: 0</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3 p-2.5 rounded-lg bg-subtle">
-                      <div className="w-2 h-2 rounded-full bg-accent mt-1.5 flex-shrink-0" />
-                      <div>
-                        <p className="text-xs font-medium text-white">ResQNet v1.0.0 running</p>
-                        <p className="text-xs text-muted mt-0.5">4 services · 21 responders active</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3 p-2.5 rounded-lg bg-subtle">
-                      <div className="w-2 h-2 rounded-full bg-warning mt-1.5 flex-shrink-0" />
-                      <div>
-                        <p className="text-xs font-medium text-white">Mumbai responders busy</p>
-                        <p className="text-xs text-muted mt-0.5">All 5 Mumbai units on duty</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="px-4 py-2 border-t border-border">
-                    <p className="text-xs text-muted text-center">No critical alerts</p>
-                  </div>
+
+            <div className="text-slate-700">|</div>
+
+            {/* Alerts */}
+            {critical > 0 && (
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-500 bg-opacity-10 border border-red-500 border-opacity-30 cursor-pointer hover:bg-opacity-20 transition-all"
+                onClick={() => navigate('/incidents')}>
+                <AlertTriangle className="w-3 h-3 text-red-400" />
+                <span className="text-xs font-bold text-red-400">{critical} CRITICAL</span>
+              </div>
+            )}
+
+            {/* All systems */}
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-500 bg-opacity-10 border border-green-500 border-opacity-30">
+              <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+              <span className="text-xs font-bold text-green-400">All Systems Operational</span>
+            </div>
+
+            {/* Clock */}
+            <div className="flex items-center gap-1.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+              <span className="text-xs font-mono text-slate-400">Last sync: {time.toLocaleTimeString()}</span>
+            </div>
+
+            {/* Bell */}
+            <button className="relative text-slate-500 hover:text-white transition-colors">
+              <Bell className="w-4 h-4" />
+              {pending > 0 && (
+                <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-red-500 flex items-center justify-center">
+                  <span className="text-white font-bold" style={{fontSize:'7px'}}>{pending}</span>
                 </div>
               )}
-            </div>
+            </button>
           </div>
         </header>
 
-        {/* Real-time status bar */}
-        <RealtimeStatusBar />
-
         {/* Page content */}
-        <main className="flex-1 overflow-auto p-6 bg-background">
+        <main className="flex-1 overflow-y-auto bg-slate-950 p-6">
           <Outlet />
         </main>
       </div>
