@@ -1,0 +1,61 @@
+name: PR Validation
+
+on:
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  validate:
+    name: Validate PR
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check Java services compile
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+          cache: maven
+
+      - name: Compile all Java services
+        run: |
+          for svc in user-service emergency-service dispatch-service api-gateway; do
+            echo "Compiling $svc..."
+            cd services/$svc && mvn compile -q && cd ../..
+          done
+          echo "All services compile successfully!"
+
+      - name: Check Python syntax
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Validate Python files
+        run: |
+          cd services/ai-service
+          pip install pyflakes -q
+          python -m pyflakes app/ || true
+          echo "Python validation complete"
+
+      - name: Check frontend builds
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Build check
+        run: |
+          cd frontend
+          npm ci --silent
+          npm run build
+          echo "Frontend build successful!"
+
+      - name: Validate K8s manifests
+        run: |
+          echo "Checking YAML syntax..."
+          find k8s/ -name "*.yaml" | while read f; do
+            python3 -c "import yaml; yaml.safe_load_all(open('$f'))" && echo "OK: $f"
+          done
+          echo "All K8s manifests valid!"

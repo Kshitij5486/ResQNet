@@ -1,0 +1,50 @@
+name: Code Quality
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 6 * * 1'  # Every Monday 6am
+
+jobs:
+  quality:
+    name: Code Quality Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+          cache: maven
+
+      - name: Check for TODO/FIXME comments
+        run: |
+          echo "=== TODO/FIXME Report ===" 
+          grep -rn "TODO\|FIXME\|HACK\|XXX" services/ --include="*.java" | wc -l | xargs echo "Found issues:"
+          echo "Review complete"
+
+      - name: Count lines of code
+        run: |
+          echo "=== Lines of Code ==="
+          echo "Java services:"
+          find services/ -name "*.java" | xargs wc -l | tail -1
+          echo "Python AI service:"
+          find services/ai-service -name "*.py" | xargs wc -l | tail -1
+          echo "React frontend:"
+          find frontend/src -name "*.jsx" -o -name "*.js" | xargs wc -l | tail -1
+          echo "K8s manifests:"
+          find k8s/ -name "*.yaml" | xargs wc -l | tail -1
+
+      - name: Project structure summary
+        run: |
+          echo "## Code Quality Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Component | Files | Technology |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|-------|------------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Java Services | $(find services/ -name '*.java' | wc -l) | Spring Boot 3.3" >> $GITHUB_STEP_SUMMARY
+          echo "| Python AI | $(find services/ai-service -name '*.py' | wc -l) | FastAPI + scikit-learn" >> $GITHUB_STEP_SUMMARY
+          echo "| React Pages | $(find frontend/src -name '*.jsx' | wc -l) | React 18 + Vite" >> $GITHUB_STEP_SUMMARY
+          echo "| K8s Manifests | $(find k8s/ -name '*.yaml' | wc -l) | Kubernetes" >> $GITHUB_STEP_SUMMARY
