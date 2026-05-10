@@ -11,6 +11,7 @@ export default defineConfig({
       '/api/monitoring': { target: 'http://localhost:8083', changeOrigin: true },
       '/api/health/stats': { target: 'http://localhost:8083', changeOrigin: true },
       '/api/health':     { target: 'http://localhost:8082', changeOrigin: true },
+      '/api/ai':         { target: 'http://localhost:8084', changeOrigin: true },
     }
   }
 })

@@ -121,17 +121,19 @@ class ModelService:
     @classmethod
     def _train_anomaly_model(cls, IsoF, Scaler, np):
         np.random.seed(42)
+        n = 1000
+        # Normal operations: 1-8 incidents, 2-6 min response, 5-15 responders, 1-8 active
         normal = np.column_stack([
-            np.random.normal(5,   1.5, 800),
-            np.random.normal(3.5, 0.8, 800),
-            np.random.normal(10,  2.0, 800),
-            np.random.normal(0.7, 0.1, 800),
+            np.random.uniform(1, 8,  n),
+            np.random.uniform(2, 6,  n),
+            np.random.uniform(5, 15, n),
+            np.random.uniform(1, 8,  n),
         ])
         cls.anomaly_scaler = Scaler()
         normal_scaled = cls.anomaly_scaler.fit_transform(normal)
-        cls.anomaly_model = IsoF(n_estimators=150, contamination=0.08, random_state=42)
+        cls.anomaly_model = IsoF(n_estimators=150, contamination=0.05, random_state=42)
         cls.anomaly_model.fit(normal_scaled)
-        logger.info("Anomaly detection model trained on 800 normal-operation samples")
+        logger.info("Anomaly detection model trained on 1000 normal-operation samples")
 
     @classmethod
     def predict_severity(cls, type_: str, city: str, hour: int, day_of_week: int) -> dict:
@@ -291,7 +293,7 @@ class ModelService:
         Xs     = cls.anomaly_scaler.transform(X)
         score  = float(cls.anomaly_model.score_samples(Xs)[0])
         is_ano = cls.anomaly_model.predict(Xs)[0] == -1
-        norm   = round(min(1.0, max(0.0, (-score + 0.3) * 2.5)), 3)
+        norm   = round(min(1.0, max(0.0, (-score - 0.05) * 1.2)), 3)
 
         severity = "NORMAL" if norm < 0.3 else "ELEVATED" if norm < 0.6 else "HIGH" if norm < 0.8 else "CRITICAL"
 
@@ -307,7 +309,7 @@ class ModelService:
                 desc = "Anomalous operational pattern detected"
 
         rec = (
-            "No action needed — continue normal operations" if not is_ano
+            "No action needed - continue normal operations" if not is_ano
             else "Monitor closely — situation developing"    if norm < 0.5
             else "Activate reserve units immediately"        if norm < 0.8
             else "ALERT: Declare major incident - mobilize all resources"
