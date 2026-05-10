@@ -1,186 +1,100 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
-  Users, MapPin, Phone, Car, Filter, CheckCircle,
-  XCircle, AlertTriangle, Search, X, RefreshCw,
-  Zap, Shield, Activity, Clock
+  Users, MapPin, Phone, Car, X, Search,
+  Radio, Zap, Heart, Shield, Flame, Filter,
+  ChevronRight, Activity, RefreshCw, AlertCircle
 } from 'lucide-react'
 import api from '../api/axios'
 
-const CITIES = ['mumbai', 'delhi', 'bangalore']
-
-const TYPE_COLORS = {
-  AMBULANCE: { text: 'text-accent',  bg: 'bg-accent',  label: 'Ambulance', dot: '#3b82f6' },
-  FIRE:      { text: 'text-danger',  bg: 'bg-danger',  label: 'Fire Unit', dot: '#ef4444' },
-  POLICE:    { text: 'text-warning', bg: 'bg-warning', label: 'Police',    dot: '#f59e0b' },
+const TYPE_CONFIG = {
+  AMBULANCE: { icon: Heart,  color: '#3b82f6', bg: 'bg-blue-500',   text: 'text-blue-400',   border: 'border-blue-500',   label: 'Ambulance' },
+  FIRE:      { icon: Flame,  color: '#ef4444', bg: 'bg-red-500',    text: 'text-red-400',    border: 'border-red-500',    label: 'Fire Unit' },
+  POLICE:    { icon: Shield, color: '#f59e0b', bg: 'bg-amber-500',  text: 'text-amber-400',  border: 'border-amber-500',  label: 'Police'    },
 }
 
-function ResponderDetailModal({ responder, onClose }) {
-  useEffect(() => {
-    const h = e => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', h)
-    return () => window.removeEventListener('keydown', h)
-  }, [onClose])
+const STATUS_CONFIG = {
+  AVAILABLE: { color: 'text-green-400',  bg: 'bg-green-500',  dot: 'bg-green-400',  border: 'border-green-500',  label: 'Available' },
+  BUSY:      { color: 'text-red-400',    bg: 'bg-red-500',    dot: 'bg-red-400',    border: 'border-red-500',    label: 'On Duty'   },
+  OFFLINE:   { color: 'text-slate-400',  bg: 'bg-slate-500',  dot: 'bg-slate-400',  border: 'border-slate-500',  label: 'Offline'   },
+}
 
-  const type    = TYPE_COLORS[responder.type] || { text: 'text-muted', bg: 'bg-muted', label: responder.type, dot: '#64748b' }
-  const isAvail = responder.status === 'AVAILABLE'
+const CITIES = ['mumbai','delhi','bangalore']
 
+function DetailModal({ responder, onClose }) {
+  const tc = TYPE_CONFIG[responder.type]     || { icon: Radio, color:'#64748b', label: responder.type }
+  const sc = STATUS_CONFIG[responder.status] || STATUS_CONFIG.OFFLINE
+  const Icon = tc.icon
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-card border border-border rounded-2xl w-full max-w-lg shadow-2xl" onClick={e => e.stopPropagation()}>
-
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+    <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-4 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg shadow-2xl" onClick={e=>e.stopPropagation()}>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800">
           <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-xl ${type.bg} bg-opacity-10 border ${type.bg} border-opacity-20 flex items-center justify-center`}>
-              <Users className={`w-5 h-5 ${type.text}`} />
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{background:tc.color+'20',border:`1px solid ${tc.color}40`}}>
+              <Icon className="w-6 h-6" style={{color:tc.color}}/>
             </div>
             <div>
-              <h2 className="text-white font-bold">{responder.name}</h2>
-              <p className="text-muted text-xs">{type.label} · Port 8083</p>
+              <h2 className="text-white font-bold text-lg">{responder.name}</h2>
+              <p className="text-slate-500 text-xs">{tc.label} · {responder.city?.charAt(0).toUpperCase()+responder.city?.slice(1)}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-semibold ${
-              isAvail
-                ? 'bg-success bg-opacity-10 border-success border-opacity-30 text-success'
-                : 'bg-danger bg-opacity-10 border-danger border-opacity-30 text-danger'
-            }`}>
-              {isAvail ? <CheckCircle className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
-              {responder.status}
+          <div className="flex items-center gap-3">
+            <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${sc.color} bg-slate-800 border ${sc.border} border-opacity-30`}>
+              <div className={`w-1.5 h-1.5 rounded-full ${sc.dot} ${responder.status==='AVAILABLE'?'animate-pulse':''}`}/>
+              {sc.label}
             </div>
-            <button onClick={onClose} className="text-muted hover:text-white transition-colors ml-1">
-              <X className="w-5 h-5" />
-            </button>
+            <button onClick={onClose} className="text-slate-600 hover:text-white transition-colors"><X className="w-5 h-5"/></button>
           </div>
         </div>
 
-        {/* Body */}
         <div className="p-6 space-y-5">
-          {/* Status Banner */}
-          <div className={`rounded-xl p-4 border ${
-            isAvail
-              ? 'bg-success bg-opacity-5 border-success border-opacity-20'
-              : 'bg-danger bg-opacity-5 border-danger border-opacity-20'
-          }`}>
-            <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-full ${isAvail ? 'bg-success' : 'bg-danger'} bg-opacity-20 flex items-center justify-center`}>
-                {isAvail
-                  ? <CheckCircle className="w-5 h-5 text-success" />
-                  : <Zap className="w-5 h-5 text-danger" />
-                }
-              </div>
-              <div>
-                <p className={`text-sm font-bold ${isAvail ? 'text-success' : 'text-danger'}`}>
-                  {isAvail ? 'Available for Dispatch' : 'Currently On Duty'}
-                </p>
-                <p className="text-xs text-muted mt-0.5">
-                  {isAvail
-                    ? 'This responder can be assigned to new incidents'
-                    : 'Handling an active incident via Kafka dispatch'
-                  }
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Details Grid */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="bg-subtle rounded-xl p-4 space-y-3">
-              <h3 className="text-xs font-semibold text-muted uppercase tracking-wider">Unit Info</h3>
-              <div className="space-y-2.5">
-                <div className="flex items-center gap-2">
-                  <Car className="w-3.5 h-3.5 text-muted flex-shrink-0" />
-                  <div>
-                    <p className="text-xs text-muted">Vehicle ID</p>
-                    <p className="text-xs font-semibold text-white">{responder.vehicleId || 'N/A'}</p>
-                  </div>
+            {[
+              {label:'Vehicle ID', value:responder.vehicleId||'N/A',    icon:Car   },
+              {label:'Phone',      value:responder.phoneNumber||'N/A',  icon:Phone },
+              {label:'City',       value:responder.city?.charAt(0).toUpperCase()+responder.city?.slice(1), icon:MapPin},
+              {label:'Unit Type',  value:tc.label,                      icon:Radio },
+            ].map(({label,value,icon:I}) => (
+              <div key={label} className="bg-slate-800 rounded-xl p-4 border border-slate-700">
+                <div className="flex items-center gap-2 mb-2">
+                  <I className="w-3.5 h-3.5 text-slate-500"/>
+                  <span className="text-xs text-slate-500 uppercase tracking-widest font-bold">{label}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Phone className="w-3.5 h-3.5 text-muted flex-shrink-0" />
-                  <div>
-                    <p className="text-xs text-muted">Phone</p>
-                    <p className="text-xs font-semibold text-white">{responder.phoneNumber || 'N/A'}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Users className="w-3.5 h-3.5 text-muted flex-shrink-0" />
-                  <div>
-                    <p className="text-xs text-muted">Unit Type</p>
-                    <p className={`text-xs font-semibold ${type.text}`}>{type.label}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <MapPin className="w-3.5 h-3.5 text-muted flex-shrink-0" />
-                  <div>
-                    <p className="text-xs text-muted">City</p>
-                    <p className="text-xs font-semibold text-white capitalize">{responder.city}</p>
-                  </div>
-                </div>
+                <p className="text-white font-semibold text-sm">{value}</p>
               </div>
-            </div>
+            ))}
+          </div>
 
-            <div className="bg-subtle rounded-xl p-4 space-y-3">
-              <h3 className="text-xs font-semibold text-muted uppercase tracking-wider">GPS Location</h3>
-              <div className="space-y-2.5">
-                <div>
-                  <p className="text-xs text-muted mb-0.5">Latitude</p>
-                  <p className="text-xs font-mono font-semibold text-white">{responder.latitude?.toFixed(6)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted mb-0.5">Longitude</p>
-                  <p className="text-xs font-mono font-semibold text-white">{responder.longitude?.toFixed(6)}</p>
-                </div>
-              </div>
-              <div className="h-20 bg-background rounded-lg border border-border flex items-center justify-center mt-2">
-                <div className="text-center">
-                  <div style={{ width:10, height:10, borderRadius:'50%', background: type.dot, margin:'0 auto 6px', boxShadow:`0 0 8px ${type.dot}` }} />
-                  <p className="text-xs font-mono text-muted">{responder.latitude?.toFixed(4)}</p>
-                  <p className="text-xs font-mono text-muted">{responder.longitude?.toFixed(4)}</p>
-                </div>
+          <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
+            <div className="flex items-center gap-2 mb-3">
+              <MapPin className="w-3.5 h-3.5 text-slate-500"/>
+              <span className="text-xs text-slate-500 uppercase tracking-widest font-bold">GPS Position</span>
+            </div>
+            <div className="grid grid-cols-2 gap-3 mb-3">
+              <div><p className="text-xs text-slate-600 mb-1">Latitude</p><p className="text-white font-mono text-sm">{responder.latitude}</p></div>
+              <div><p className="text-xs text-slate-600 mb-1">Longitude</p><p className="text-white font-mono text-sm">{responder.longitude}</p></div>
+            </div>
+            <div className="h-20 bg-slate-900 rounded-lg border border-slate-700 flex items-center justify-center">
+              <div className="text-center">
+                <div className="w-2 h-2 rounded-full mx-auto mb-1" style={{background:tc.color}}/>
+                <p className="text-xs font-mono text-slate-500">{responder.latitude?.toFixed(4)}, {responder.longitude?.toFixed(4)}</p>
               </div>
             </div>
           </div>
 
-          {/* Active Incident */}
           {responder.currentIncidentId && (
-            <div className="bg-warning bg-opacity-5 border border-warning border-opacity-20 rounded-xl p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <AlertTriangle className="w-4 h-4 text-warning" />
-                <p className="text-sm font-semibold text-warning">Active Incident</p>
+            <div className="bg-red-500 bg-opacity-5 border border-red-500 border-opacity-20 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-1">
+                <AlertCircle className="w-3.5 h-3.5 text-red-400"/>
+                <span className="text-xs font-bold text-red-400 uppercase tracking-widest">Active Incident</span>
               </div>
-              <p className="text-xs text-muted mb-1">Currently assigned to:</p>
-              <p className="text-xs font-mono text-white break-all">{responder.currentIncidentId}</p>
-              <div className="flex items-center gap-1.5 mt-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-warning animate-pulse" />
-                <p className="text-xs text-warning">Dispatched via Kafka · Haversine algorithm</p>
-              </div>
+              <p className="text-xs font-mono text-slate-400 break-all">{responder.currentIncidentId}</p>
             </div>
           )}
 
-          {/* Capabilities */}
-          <div className="bg-subtle rounded-xl p-4">
-            <h3 className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">Capabilities</h3>
-            <div className="flex flex-wrap gap-2">
-              {responder.type === 'AMBULANCE' && ['Emergency Medical', 'Patient Transport', 'First Aid', 'Defibrillation'].map(c => (
-                <span key={c} className="text-xs px-2.5 py-1 rounded-full bg-accent bg-opacity-10 text-accent border border-accent border-opacity-20">{c}</span>
-              ))}
-              {responder.type === 'FIRE' && ['Fire Suppression', 'Rescue Operations', 'Hazmat Response', 'Search & Rescue'].map(c => (
-                <span key={c} className="text-xs px-2.5 py-1 rounded-full bg-danger bg-opacity-10 text-danger border border-danger border-opacity-20">{c}</span>
-              ))}
-              {responder.type === 'POLICE' && ['Law Enforcement', 'Traffic Control', 'Crowd Management', 'Investigation'].map(c => (
-                <span key={c} className="text-xs px-2.5 py-1 rounded-full bg-warning bg-opacity-10 text-warning border border-warning border-opacity-20">{c}</span>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="px-6 py-3 border-t border-border flex items-center justify-between">
-          <p className="text-xs text-muted">ESC to close</p>
-          <div className="flex items-center gap-1.5 text-xs text-muted">
-            <Activity className="w-3 h-3" />
-            <span>Live data · auto-refreshes</span>
+          <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
+            <p className="text-xs text-slate-500 uppercase tracking-widest font-bold mb-2">Unit ID</p>
+            <p className="text-xs font-mono text-slate-400 break-all">{responder.id}</p>
           </div>
         </div>
       </div>
@@ -189,284 +103,257 @@ function ResponderDetailModal({ responder, onClose }) {
 }
 
 function ResponderCard({ responder, onClick }) {
-  const type    = TYPE_COLORS[responder.type] || { text: 'text-muted', bg: 'bg-muted', label: responder.type, dot: '#64748b' }
+  const tc = TYPE_CONFIG[responder.type]     || { icon:Radio, color:'#64748b', label:responder.type, bg:'bg-slate-500', text:'text-slate-400', border:'border-slate-500' }
+  const sc = STATUS_CONFIG[responder.status] || STATUS_CONFIG.OFFLINE
+  const Icon = tc.icon
   const isAvail = responder.status === 'AVAILABLE'
-
   return (
-    <div
-      onClick={() => onClick(responder)}
-      className={`bg-card border rounded-xl p-4 transition-all cursor-pointer group ${
-        isAvail
-          ? 'border-border hover:border-success hover:border-opacity-40 hover:shadow-lg hover:shadow-success hover:shadow-opacity-5'
-          : 'border-danger border-opacity-20 hover:border-opacity-40'
-      }`}
-    >
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center gap-2.5">
-          <div className={`w-9 h-9 rounded-lg ${type.bg} bg-opacity-10 flex items-center justify-center`}>
-            <Users className={`w-4 h-4 ${type.text}`} />
+    <div onClick={onClick}
+      className={`bg-slate-900 border rounded-xl p-5 cursor-pointer hover:border-opacity-50 hover:-translate-y-0.5 transition-all duration-200 group relative overflow-hidden ${
+        isAvail ? 'border-slate-700 hover:border-green-500' : 'border-slate-800 hover:border-red-500'
+      }`}>
+      <div className={`absolute top-0 left-0 w-0.5 h-full ${isAvail ? 'bg-green-500' : 'bg-red-500'} opacity-60`}/>
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{background:tc.color+'18',border:`1px solid ${tc.color}33`}}>
+            <Icon className="w-5 h-5" style={{color:tc.color}}/>
           </div>
           <div>
-            <p className="text-white text-sm font-semibold leading-tight group-hover:text-accent transition-colors">{responder.name}</p>
-            <span className={`text-xs font-medium px-1.5 py-0.5 rounded-full ${type.bg} bg-opacity-10 ${type.text}`}>
-              {type.label}
-            </span>
+            <p className="text-white font-semibold text-sm group-hover:text-white transition-colors">{responder.name}</p>
+            <p className="text-slate-500 text-xs">{tc.label}</p>
           </div>
         </div>
-        <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
-          isAvail ? 'bg-success bg-opacity-10 text-success' : 'bg-danger bg-opacity-10 text-danger'
-        }`}>
-          {isAvail ? <CheckCircle className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
-          {responder.status}
+        <div className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-bold ${sc.color} bg-slate-800 border ${sc.border} border-opacity-20`}>
+          <div className={`w-1.5 h-1.5 rounded-full ${sc.dot} ${isAvail?'animate-pulse':''}`}/>
+          {sc.label}
         </div>
       </div>
 
-      <div className="space-y-1.5 mt-3 pt-3 border-t border-border">
-        {responder.vehicleId && (
-          <div className="flex items-center gap-2 text-xs text-muted">
-            <Car className="w-3.5 h-3.5 flex-shrink-0" />
-            <span>{responder.vehicleId}</span>
-          </div>
-        )}
-        {responder.phoneNumber && (
-          <div className="flex items-center gap-2 text-xs text-muted">
-            <Phone className="w-3.5 h-3.5 flex-shrink-0" />
-            <span>{responder.phoneNumber}</span>
-          </div>
-        )}
-        <div className="flex items-center gap-2 text-xs text-muted">
-          <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
-          <span>{responder.latitude?.toFixed(4)}, {responder.longitude?.toFixed(4)}</span>
-        </div>
-        {responder.currentIncidentId && (
-          <div className="mt-2 pt-2 border-t border-border flex items-center gap-1.5">
-            <AlertTriangle className="w-3 h-3 text-warning flex-shrink-0" />
-            <span className="text-xs font-mono text-warning truncate">{responder.currentIncidentId?.slice(0, 14)}...</span>
-          </div>
-        )}
-      </div>
-
-      <div className="mt-3 pt-2 border-t border-border opacity-0 group-hover:opacity-100 transition-opacity">
-        <p className="text-xs text-accent text-center">Click to view details</p>
-      </div>
-    </div>
-  )
-}
-
-function CitySection({ city, filterStatus, search, onSelectResponder }) {
-  const { data: all = [], isLoading } = useQuery({
-    queryKey:       ['responders-all', city],
-    queryFn:        () => api.get('/api/responders?city=' + city).then(r => r.data),
-    refetchInterval: 10000,
-  })
-
-  const available = all.filter(r => r.status === 'AVAILABLE')
-  const busy      = all.filter(r => r.status === 'BUSY')
-  const pct       = all.length > 0 ? Math.round((available.length / all.length) * 100) : 0
-
-  const displayed = all
-    .filter(r => {
-      if (filterStatus === 'AVAILABLE' && r.status !== 'AVAILABLE') return false
-      if (filterStatus === 'BUSY'      && r.status !== 'BUSY')      return false
-      if (search) {
-        const q = search.toLowerCase()
-        return r.name?.toLowerCase().includes(q) ||
-               r.type?.toLowerCase().includes(q) ||
-               r.vehicleId?.toLowerCase().includes(q) ||
-               r.phoneNumber?.includes(q)
-      }
-      return true
-    })
-
-  if (search && displayed.length === 0) return null
-
-  return (
-    <div className="mb-8">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <MapPin className="w-4 h-4 text-accent" />
-          <h2 className="text-base font-bold text-white capitalize">{city}</h2>
-          <div className="flex items-center gap-3 text-xs text-muted">
-            <span><span className="text-success font-semibold">{available.length}</span> available</span>
-            <span><span className="text-danger font-semibold">{busy.length}</span> busy</span>
-            <span>{all.length} total</span>
-          </div>
+      <div className="space-y-2">
+        <div className="flex items-center gap-2">
+          <MapPin className="w-3 h-3 text-slate-600 flex-shrink-0"/>
+          <span className="text-xs text-slate-400 capitalize">{responder.city}</span>
+          <span className="text-slate-700 text-xs">·</span>
+          <span className="text-xs font-mono text-slate-600">{responder.latitude?.toFixed(3)}, {responder.longitude?.toFixed(3)}</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-28 h-1.5 bg-subtle rounded-full overflow-hidden">
-            <div
-              className={`h-full rounded-full transition-all duration-700 ${pct > 50 ? 'bg-success' : pct > 25 ? 'bg-warning' : 'bg-danger'}`}
-              style={{ width: pct + '%' }}
-            />
-          </div>
-          <span className="text-xs text-muted w-16 text-right">{pct}% available</span>
+          <Car className="w-3 h-3 text-slate-600 flex-shrink-0"/>
+          <span className="text-xs text-slate-400">{responder.vehicleId||'—'}</span>
+          <span className="text-slate-700 text-xs">·</span>
+          <Phone className="w-3 h-3 text-slate-600"/>
+          <span className="text-xs text-slate-400">{responder.phoneNumber||'—'}</span>
         </div>
+        {responder.currentIncidentId && (
+          <div className="flex items-center gap-2 mt-2 pt-2 border-t border-slate-800">
+            <AlertCircle className="w-3 h-3 text-red-400 flex-shrink-0"/>
+            <span className="text-xs text-red-400 font-medium truncate">Incident: {responder.currentIncidentId?.slice(0,16)}...</span>
+          </div>
+        )}
       </div>
 
-      {isLoading ? (
-        <div className="grid grid-cols-4 gap-3">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="bg-card border border-border rounded-xl p-4 h-44 animate-pulse">
-              <div className="flex gap-2 mb-3">
-                <div className="w-9 h-9 bg-subtle rounded-lg" />
-                <div className="flex-1">
-                  <div className="h-3.5 bg-subtle rounded mb-1.5 w-3/4" />
-                  <div className="h-3 bg-subtle rounded w-1/2" />
-                </div>
-              </div>
-              <div className="space-y-2 mt-4">
-                <div className="h-3 bg-subtle rounded" />
-                <div className="h-3 bg-subtle rounded w-4/5" />
-                <div className="h-3 bg-subtle rounded w-3/5" />
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : displayed.length === 0 ? (
-        <div className="bg-card border border-border rounded-xl p-6 text-center">
-          <p className="text-muted text-sm">No {filterStatus?.toLowerCase() || ''} responders in {city}</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-4 gap-3">
-          {displayed.map(r => (
-            <ResponderCard key={r.id} responder={r} onClick={onSelectResponder} />
-          ))}
-        </div>
-      )}
+      <div className="mt-3 pt-3 border-t border-slate-800 flex items-center justify-between">
+        <span className="text-xs text-slate-600">View details</span>
+        <ChevronRight className="w-3.5 h-3.5 text-slate-700 group-hover:text-blue-400 group-hover:translate-x-0.5 transition-all"/>
+      </div>
     </div>
   )
 }
 
 export default function Responders() {
-  const [filterStatus,   setFilterStatus]   = useState('')
-  const [search,         setSearch]         = useState('')
-  const [selectedResp,   setSelectedResp]   = useState(null)
-  const searchRef = useRef(null)
+  const [selected,    setSelected]    = useState(null)
+  const [filterCity,  setFilterCity]  = useState('')
+  const [filterType,  setFilterType]  = useState('')
+  const [filterStatus,setFilterStatus]= useState('')
+  const [search,      setSearch]      = useState('')
+  const [view,        setView]        = useState('grid')
 
-  useEffect(() => {
-    const h = e => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault()
-        searchRef.current?.focus()
-      }
-    }
-    window.addEventListener('keydown', h)
-    return () => window.removeEventListener('keydown', h)
-  }, [])
-
-  const cityStats = CITIES.map(city => {
-    const { data: all = [] } = useQuery({
-      queryKey:       ['responders-all', city],
-      queryFn:        () => api.get('/api/responders?city=' + city).then(r => r.data),
-      refetchInterval: 10000,
-    })
-    return {
-      city,
-      available: all.filter(r => r.status === 'AVAILABLE').length,
-      busy:      all.filter(r => r.status === 'BUSY').length,
-      total:     all.length,
-    }
+  const { data:allResponders=[], isLoading, refetch, dataUpdatedAt } = useQuery({
+    queryKey: ['responders-all'],
+    queryFn: async () => {
+      const results = await Promise.all(
+        CITIES.map(c => api.get('/api/responders?city='+c).then(r=>r.data))
+      )
+      return results.flat()
+    },
+    refetchInterval: 10000,
   })
 
-  const totalAvail = cityStats.reduce((s, c) => s + c.available, 0)
-  const totalBusy  = cityStats.reduce((s, c) => s + c.busy,      0)
-  const totalAll   = cityStats.reduce((s, c) => s + c.total,     0)
+  const filtered = allResponders
+    .filter(r => {
+      if (filterCity   && r.city   !== filterCity)   return false
+      if (filterType   && r.type   !== filterType)   return false
+      if (filterStatus && r.status !== filterStatus)  return false
+      if (search) {
+        const q = search.toLowerCase()
+        return r.name?.toLowerCase().includes(q) || r.vehicleId?.toLowerCase().includes(q) ||
+               r.city?.toLowerCase().includes(q) || r.type?.toLowerCase().includes(q)
+      }
+      return true
+    })
+
+  const available  = allResponders.filter(r=>r.status==='AVAILABLE').length
+  const busy       = allResponders.filter(r=>r.status==='BUSY').length
+  const byCity     = CITIES.map(c => ({
+    city: c,
+    total:     allResponders.filter(r=>r.city===c).length,
+    available: allResponders.filter(r=>r.city===c&&r.status==='AVAILABLE').length,
+  }))
+  const lastSync = dataUpdatedAt ? new Date(dataUpdatedAt).toLocaleTimeString() : '--'
+
+  const TYPES = [...new Set(allResponders.map(r=>r.type))].filter(Boolean)
 
   return (
     <div className="space-y-5">
-      {selectedResp && (
-        <ResponderDetailModal responder={selectedResp} onClose={() => setSelectedResp(null)} />
-      )}
+      {selected && <DetailModal responder={selected} onClose={()=>setSelected(null)}/>}
 
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-white">Responders</h1>
-          <p className="text-muted text-sm mt-0.5">
-            <span className="text-success font-medium">{totalAvail}</span> available
-            <span className="text-muted mx-1.5">·</span>
-            <span className="text-danger font-medium">{totalBusy}</span> busy
-            <span className="text-muted mx-1.5">·</span>
-            {totalAll} total across 3 cities
+          <h1 className="text-2xl font-bold text-white tracking-tight">Responder Units</h1>
+          <p className="text-slate-500 text-sm mt-0.5">
+            <span className="text-white font-medium">{allResponders.length}</span> total ·
+            <span className="text-green-400 ml-1 font-medium">{available} available</span> ·
+            <span className="text-red-400 ml-1 font-medium">{busy} on duty</span>
+            <span className="text-slate-600 ml-2">· synced {lastSync}</span>
           </p>
         </div>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center rounded-lg border border-slate-700 overflow-hidden">
+            {['grid','list'].map(v => (
+              <button key={v} onClick={()=>setView(v)}
+                className={`px-3 py-1.5 text-xs font-medium capitalize transition-all ${v===view?'bg-slate-700 text-white':'text-slate-500 hover:text-white'}`}>
+                {v}
+              </button>
+            ))}
+          </div>
+          <button onClick={()=>refetch()}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-700 text-slate-400 hover:text-white text-sm transition-all hover:border-slate-500">
+            <RefreshCw className="w-3.5 h-3.5"/>Refresh
+          </button>
+        </div>
       </div>
 
-      {/* Search + Filter */}
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1 min-w-48 max-w-72">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted" />
-          <input
-            ref={searchRef}
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Search responders... (⌘K)"
-            className="w-full bg-card border border-border rounded-lg pl-9 pr-8 py-1.5 text-sm text-white placeholder-muted focus:outline-none focus:border-accent transition-colors"
-          />
-          {search && (
-            <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-white">
-              <X className="w-3.5 h-3.5" />
-            </button>
-          )}
-        </div>
+      {/* City stats */}
+      <div className="grid grid-cols-3 gap-4">
+        {byCity.map(({city,total,available:av}) => {
+          const pct = total>0 ? Math.round((av/total)*100) : 0
+          const color = pct>60?'text-green-400':pct>30?'text-yellow-400':'text-red-400'
+          const bar   = pct>60?'bg-green-500':pct>30?'bg-yellow-500':'bg-red-500'
+          return (
+            <div key={city} onClick={()=>setFilterCity(filterCity===city?'':city)}
+              className={`bg-slate-900 border rounded-xl p-4 cursor-pointer transition-all hover:-translate-y-0.5 ${
+                filterCity===city ? 'border-blue-500 border-opacity-50' : 'border-slate-800 hover:border-slate-600'
+              }`}>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Radio className="w-4 h-4 text-slate-500"/>
+                  <span className="text-sm font-bold text-white capitalize">{city}</span>
+                </div>
+                <span className={`text-sm font-bold ${color}`}>{av}/{total}</span>
+              </div>
+              <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden mb-2">
+                <div className={`h-full rounded-full transition-all duration-700 ${bar}`} style={{width:pct+'%'}}/>
+              </div>
+              <p className="text-xs text-slate-600">{pct}% available · click to filter</p>
+            </div>
+          )
+        })}
+      </div>
 
-        <div className="flex items-center gap-2">
-          <Filter className="w-3.5 h-3.5 text-muted" />
-          <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
-            className="bg-card border border-border rounded-lg px-3 py-1.5 text-sm text-slate-300 focus:outline-none focus:border-accent transition-colors">
-            <option value="">All Status</option>
-            <option value="AVAILABLE">Available</option>
-            <option value="BUSY">Busy</option>
+      {/* Filters */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="relative flex-1 min-w-48 max-w-64">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-600"/>
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search by name, vehicle..."
+            className="w-full bg-slate-900 border border-slate-700 rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-blue-500 transition-colors"/>
+        </div>
+        <Filter className="w-3.5 h-3.5 text-slate-600"/>
+        {[
+          {value:filterStatus, set:setFilterStatus, opts:['AVAILABLE','BUSY'], ph:'All Status'},
+          {value:filterType,   set:setFilterType,   opts:TYPES,                ph:'All Types' },
+        ].map(({value,set,opts,ph},i) => (
+          <select key={i} value={value} onChange={e=>set(e.target.value)}
+            className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:border-blue-500 transition-colors">
+            <option value="">{ph}</option>
+            {opts.map(o=><option key={o} value={o}>{o.charAt(0)+o.slice(1).toLowerCase()}</option>)}
           </select>
-        </div>
-
-        {(filterStatus || search) && (
-          <button onClick={() => { setFilterStatus(''); setSearch('') }}
-            className="flex items-center gap-1 text-xs text-danger hover:text-red-400 transition-colors px-2 py-1.5 rounded-lg hover:bg-danger hover:bg-opacity-10">
-            <X className="w-3 h-3" />Clear
+        ))}
+        {(filterCity||filterStatus||filterType||search) && (
+          <button onClick={()=>{setFilterCity('');setFilterStatus('');setFilterType('');setSearch('')}}
+            className="flex items-center gap-1 text-xs text-red-400 hover:text-red-300 px-2 py-1.5 rounded-lg hover:bg-red-500 hover:bg-opacity-10 transition-all">
+            <X className="w-3 h-3"/>Clear filters
           </button>
         )}
-
-        <div className="ml-auto flex items-center gap-1.5 text-xs text-muted">
-          <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
-          Auto-refresh 10s · Click card to view details
+        <div className="ml-auto text-xs text-slate-600 flex items-center gap-1.5">
+          <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"/>
+          {filtered.length} unit{filtered.length!==1?'s':''}
         </div>
       </div>
 
-      {/* City summary cards */}
-      <div className="grid grid-cols-3 gap-4">
-        {cityStats.map(({ city, available, busy, total }) => (
-          <div key={city} className="bg-card border border-border rounded-xl p-4 flex items-center gap-4 hover:border-accent hover:border-opacity-30 transition-all">
-            <div className="w-10 h-10 rounded-xl bg-accent bg-opacity-10 flex items-center justify-center flex-shrink-0">
-              <MapPin className="w-5 h-5 text-accent" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-white font-semibold capitalize">{city}</p>
-              <p className="text-muted text-xs">
-                <span className="text-success">{available}</span> avail
-                <span className="mx-1">·</span>
-                <span className="text-danger">{busy}</span> busy
-                <span className="mx-1">·</span>
-                {total} total
-              </p>
-            </div>
-            <div className={`text-2xl font-bold ${available > 0 ? 'text-success' : 'text-danger'}`}>
-              {available}
-            </div>
+      {/* Grid / List view */}
+      {isLoading ? (
+        <div className="grid grid-cols-3 gap-4">
+          {[...Array(6)].map((_,i) => <div key={i} className="h-44 bg-slate-900 rounded-xl animate-pulse border border-slate-800"/>)}
+        </div>
+      ) : filtered.length===0 ? (
+        <div className="bg-slate-900 border border-slate-800 rounded-xl py-16 text-center">
+          <Users className="w-8 h-8 text-slate-700 mx-auto mb-3"/>
+          <p className="text-white font-medium text-sm mb-1">No responders found</p>
+          <p className="text-slate-600 text-xs">Try adjusting your filters</p>
+        </div>
+      ) : view==='grid' ? (
+        <div className="grid grid-cols-3 gap-4">
+          {filtered.map(r => <ResponderCard key={r.id} responder={r} onClick={()=>setSelected(r)}/>)}
+        </div>
+      ) : (
+        <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-slate-800 bg-black bg-opacity-30">
+                {['Unit','Type','City','Vehicle','Phone','Status',''].map(h=>(
+                  <th key={h} className="px-5 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-widest">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map(r => {
+                const tc = TYPE_CONFIG[r.type]     || {icon:Radio,color:'#64748b',label:r.type}
+                const sc = STATUS_CONFIG[r.status] || STATUS_CONFIG.OFFLINE
+                const Icon = tc.icon
+                return (
+                  <tr key={r.id} onClick={()=>setSelected(r)}
+                    className="border-b border-slate-800 hover:bg-slate-800 hover:bg-opacity-40 cursor-pointer group transition-all">
+                    <td className="px-5 py-3.5">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{background:tc.color+'18'}}>
+                          <Icon className="w-4 h-4" style={{color:tc.color}}/>
+                        </div>
+                        <span className="text-sm font-medium text-white">{r.name}</span>
+                      </div>
+                    </td>
+                    <td className="px-5 py-3.5"><span className="text-xs font-bold px-2 py-0.5 rounded" style={{background:tc.color+'20',color:tc.color}}>{tc.label}</span></td>
+                    <td className="px-5 py-3.5"><span className="text-sm text-slate-300 capitalize">{r.city}</span></td>
+                    <td className="px-5 py-3.5"><span className="text-xs font-mono text-slate-400">{r.vehicleId||'—'}</span></td>
+                    <td className="px-5 py-3.5"><span className="text-xs text-slate-400">{r.phoneNumber||'—'}</span></td>
+                    <td className="px-5 py-3.5">
+                      <div className="flex items-center gap-1.5">
+                        <div className={`w-1.5 h-1.5 rounded-full ${sc.dot} ${r.status==='AVAILABLE'?'animate-pulse':''}`}/>
+                        <span className={`text-xs font-bold ${sc.color}`}>{sc.label}</span>
+                      </div>
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <ChevronRight className="w-4 h-4 text-slate-700 group-hover:text-blue-400 transition-colors"/>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+          <div className="px-5 py-3 border-t border-slate-800 bg-black bg-opacity-20">
+            <p className="text-xs text-slate-600">{filtered.length} unit{filtered.length!==1?'s':''} · Click row to view details</p>
           </div>
-        ))}
-      </div>
-
-      {/* City sections */}
-      {CITIES.map(city => (
-        <CitySection
-          key={city}
-          city={city}
-          filterStatus={filterStatus}
-          search={search}
-          onSelectResponder={setSelectedResp}
-        />
-      ))}
+        </div>
+      )}
     </div>
   )
 }
