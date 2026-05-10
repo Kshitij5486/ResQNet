@@ -1,4 +1,4 @@
-﻿# ResQNet — AI-Powered Distributed Emergency Response Platform
+# ResQNet — AI-Powered Distributed Emergency Response Platform
 
 <div align="center">
 
@@ -229,7 +229,7 @@ GET  /api/health/stats            Dispatch service stats + city data
 | 1      | ✅ Complete  | Core microservices, Kafka pipeline, DB setup  |
 | 2      | ✅ Complete  | Haversine dispatch, monitoring, resilience    |
 | 3      | ✅ Complete  | React frontend — all 6 pages, live data       |
-| 4      | 🔄 In Progress | AI/ML — priority scoring, demand prediction |
+| 4      | ✅ Complete  | AI/ML — severity predictor, dispatch scorer, demand forecaster, anomaly detector |
 | 5      | 📋 Planned   | Kubernetes deployment, Helm charts, CI/CD     |
 
 ---
