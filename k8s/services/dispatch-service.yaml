@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dispatch-service
+  namespace: resqnet
+  labels:
+    app:     dispatch-service
+    version: v1
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: dispatch-service
+  template:
+    metadata:
+      labels:
+        app:     dispatch-service
+        version: v1
+    spec:
+      containers:
+        - name:  dispatch-service
+          image: resqnet/dispatch-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8083
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: docker
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:postgresql://postgres-service:5432/emergency_db
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: resqnet-secrets
+                  key:  POSTGRES_USER
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: resqnet-secrets
+                  key:  POSTGRES_PASSWORD
+            - name: SPRING_DATA_REDIS_HOST
+              value: redis-service
+            - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
+              value: kafka-service:9092
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: resqnet-secrets
+                  key:  JWT_SECRET
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 8083
+            initialDelaySeconds: 60
+            periodSeconds:       10
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 8083
+            initialDelaySeconds: 90
+            periodSeconds:       15
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu:    "200m"
+            limits:
+              memory: "512Mi"
+              cpu:    "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dispatch-service
+  namespace: resqnet
+spec:
+  selector:
+    app: dispatch-service
+  ports:
+    - port:       8083
+      targetPort: 8083
+  type: ClusterIP

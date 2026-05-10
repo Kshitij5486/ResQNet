@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: resqnet
+  labels:
+    app: resqnet
+    environment: production
