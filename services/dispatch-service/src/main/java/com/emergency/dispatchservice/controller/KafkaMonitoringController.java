@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import com.emergency.dispatchservice.ai.AiServiceClient;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.ArrayList;
@@ -124,6 +125,17 @@ public class KafkaMonitoringController {
                 "kafka", "connected",
                 "status", "UP",
                 "timestamp", java.time.Instant.now().toString()
+        ));
+    }
+    @GetMapping("/ai")
+    public ResponseEntity<Map<String, Object>> aiIntegration() {
+        boolean available = aiServiceClient.isAvailable();
+        return ResponseEntity.ok(Map.of(
+            "ai_service",  "ResQNet AI Service v1.0",
+            "status",      available ? "CONNECTED" : "UNAVAILABLE",
+            "url",         "http://localhost:8084",
+            "models",      java.util.List.of("severity_predictor","dispatch_scorer","demand_forecaster","anomaly_detector"),
+            "integration", "Java Spring Boot -> Python FastAPI"
         ));
     }
 }

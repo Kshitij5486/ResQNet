@@ -3,6 +3,7 @@ package com.emergency.dispatchservice.controller;
 import com.emergency.dispatchservice.dto.ResponderResponse;
 import com.emergency.dispatchservice.dto.UpdateLocationRequest;
 import com.emergency.dispatchservice.service.DispatchService;
+import com.emergency.dispatchservice.ai.AiServiceClient;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -54,6 +55,16 @@ public class ResponderController {
                 "longitude", updated.longitude(),
                 "status", updated.status(),
                 "message", "Location updated successfully"
+        ));
+    }
+
+    @GetMapping("/ai-status")
+    public ResponseEntity<Map<String, Object>> aiStatus() {
+        boolean available = aiServiceClient.isAvailable();
+        return ResponseEntity.ok(Map.of(
+            "ai_service_available", available,
+            "ai_service_url",       "http://localhost:8084",
+            "integration",          "active"
         ));
     }
 

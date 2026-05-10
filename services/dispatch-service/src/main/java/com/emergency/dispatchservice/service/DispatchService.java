@@ -10,6 +10,9 @@ import com.emergency.dispatchservice.repository.ResponderRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import com.emergency.dispatchservice.ai.AiServiceClient;
+import com.emergency.dispatchservice.ai.AiDispatchResponse;
+import java.time.LocalDateTime;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
@@ -26,11 +29,13 @@ public class DispatchService {
     private static final double EARTH_RADIUS_KM = 6371.0;
 
     private final ResponderRepository responderRepository;
+    private final AiServiceClient aiServiceClient;
     private final DispatchEventPublisher eventPublisher;
 
     public DispatchService(ResponderRepository responderRepository,
                            DispatchEventPublisher eventPublisher) {
         this.responderRepository = responderRepository;
+        this.aiServiceClient     = aiServiceClient;
         this.eventPublisher = eventPublisher;
     }
 
