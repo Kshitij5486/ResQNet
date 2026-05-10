@@ -1,9 +1,9 @@
 package com.emergency.dispatchservice.controller;
 
+import com.emergency.dispatchservice.ai.AiServiceClient;
 import com.emergency.dispatchservice.dto.ResponderResponse;
 import com.emergency.dispatchservice.dto.UpdateLocationRequest;
 import com.emergency.dispatchservice.service.DispatchService;
-import com.emergency.dispatchservice.ai.AiServiceClient;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,10 +16,12 @@ import java.util.UUID;
 @RequestMapping("/api/responders")
 public class ResponderController {
 
-    private final DispatchService dispatchService;
+    private final DispatchService  dispatchService;
+    private final AiServiceClient  aiServiceClient;
 
-    public ResponderController(DispatchService dispatchService) {
+    public ResponderController(DispatchService dispatchService, AiServiceClient aiServiceClient) {
         this.dispatchService = dispatchService;
+        this.aiServiceClient = aiServiceClient;
     }
 
     @GetMapping("/available")
@@ -51,10 +53,10 @@ public class ResponderController {
         ResponderResponse updated = dispatchService.pingLocation(id, request);
         return ResponseEntity.ok(Map.of(
                 "responderId", updated.id(),
-                "latitude", updated.latitude(),
-                "longitude", updated.longitude(),
-                "status", updated.status(),
-                "message", "Location updated successfully"
+                "latitude",    updated.latitude(),
+                "longitude",   updated.longitude(),
+                "status",      updated.status(),
+                "message",     "Location updated successfully"
         ));
     }
 
@@ -62,9 +64,9 @@ public class ResponderController {
     public ResponseEntity<Map<String, Object>> aiStatus() {
         boolean available = aiServiceClient.isAvailable();
         return ResponseEntity.ok(Map.of(
-            "ai_service_available", available,
-            "ai_service_url",       "http://localhost:8084",
-            "integration",          "active"
+                "ai_service_available", available,
+                "ai_service_url",       "http://localhost:8084",
+                "integration",          "active"
         ));
     }
 
@@ -72,7 +74,7 @@ public class ResponderController {
     public ResponseEntity<Map<String, Object>> health() {
         return ResponseEntity.ok(Map.of(
                 "service", "dispatch-service",
-                "status", "UP",
+                "status",  "UP",
                 "version", "1.0.0"
         ));
     }

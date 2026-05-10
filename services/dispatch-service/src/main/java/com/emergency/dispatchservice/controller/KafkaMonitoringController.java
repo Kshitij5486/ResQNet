@@ -1,5 +1,6 @@
 package com.emergency.dispatchservice.controller;
 
+import com.emergency.dispatchservice.ai.AiServiceClient;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.ListConsumerGroupOffsetsResult;
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
@@ -9,7 +10,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import com.emergency.dispatchservice.ai.AiServiceClient;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.ArrayList;
@@ -24,15 +24,17 @@ public class KafkaMonitoringController {
 
     private static final Logger log = LoggerFactory.getLogger(KafkaMonitoringController.class);
 
-    private final AdminClient adminClient;
+    private final AdminClient    adminClient;
+    private final AiServiceClient aiServiceClient;
 
     private static final List<String> CONSUMER_GROUPS = List.of(
             "dispatch-service-group",
             "dispatch-dlt-group"
     );
 
-    public KafkaMonitoringController(AdminClient adminClient) {
-        this.adminClient = adminClient;
+    public KafkaMonitoringController(AdminClient adminClient, AiServiceClient aiServiceClient) {
+        this.adminClient     = adminClient;
+        this.aiServiceClient = aiServiceClient;
     }
 
     @GetMapping("/kafka/lag")
@@ -68,38 +70,38 @@ public class KafkaMonitoringController {
                 long totalLag = 0;
 
                 for (Map.Entry<TopicPartition, OffsetAndMetadata> entry : committedOffsets.entrySet()) {
-                    TopicPartition tp = entry.getKey();
-                    long committed = entry.getValue().offset();
-                    long end = endOffsets.getOrDefault(tp, committed);
-                    long lag = Math.max(0, end - committed);
+                    TopicPartition tp        = entry.getKey();
+                    long           committed = entry.getValue().offset();
+                    long           end       = endOffsets.getOrDefault(tp, committed);
+                    long           lag       = Math.max(0, end - committed);
                     totalLag += lag;
 
                     Map<String, Object> partitionInfo = new HashMap<>();
-                    partitionInfo.put("topic", tp.topic());
-                    partitionInfo.put("partition", tp.partition());
-                    partitionInfo.put("committedOffset", committed);
-                    partitionInfo.put("endOffset", end);
-                    partitionInfo.put("lag", lag);
+                    partitionInfo.put("topic",           tp.topic());
+                    partitionInfo.put("partition",        tp.partition());
+                    partitionInfo.put("committedOffset",  committed);
+                    partitionInfo.put("endOffset",        end);
+                    partitionInfo.put("lag",              lag);
                     partitionLags.add(partitionInfo);
                 }
 
-                groupInfo.put("totalLag", totalLag);
+                groupInfo.put("totalLag",   totalLag);
                 groupInfo.put("partitions", partitionLags);
-                groupInfo.put("status", totalLag == 0 ? "HEALTHY" : "LAGGING");
+                groupInfo.put("status",     totalLag == 0 ? "HEALTHY" : "LAGGING");
                 groupStats.add(groupInfo);
 
             } catch (InterruptedException | ExecutionException e) {
                 log.error("Error fetching lag for group {}: {}", groupId, e.getMessage());
                 Map<String, Object> errorInfo = new HashMap<>();
                 errorInfo.put("groupId", groupId);
-                errorInfo.put("error", e.getMessage());
+                errorInfo.put("error",   e.getMessage());
                 groupStats.add(errorInfo);
             }
         }
 
         result.put("consumerGroups", groupStats);
-        result.put("timestamp", java.time.Instant.now().toString());
-        result.put("overallStatus", groupStats.stream()
+        result.put("timestamp",      java.time.Instant.now().toString());
+        result.put("overallStatus",  groupStats.stream()
                 .anyMatch(g -> "LAGGING".equals(g.get("status"))) ? "LAGGING" : "HEALTHY");
 
         return ResponseEntity.ok(result);
@@ -109,7 +111,7 @@ public class KafkaMonitoringController {
     public ResponseEntity<Map<String, Object>> getTopics() {
         try {
             Map<String, Object> result = new HashMap<>();
-            result.put("topics", adminClient.listTopics().names().get());
+            result.put("topics",    adminClient.listTopics().names().get());
             result.put("timestamp", java.time.Instant.now().toString());
             return ResponseEntity.ok(result);
         } catch (Exception e) {
@@ -121,21 +123,22 @@ public class KafkaMonitoringController {
     @GetMapping("/health")
     public ResponseEntity<Map<String, Object>> health() {
         return ResponseEntity.ok(Map.of(
-                "service", "dispatch-service",
-                "kafka", "connected",
-                "status", "UP",
+                "service",   "dispatch-service",
+                "kafka",     "connected",
+                "status",    "UP",
                 "timestamp", java.time.Instant.now().toString()
         ));
     }
+
     @GetMapping("/ai")
     public ResponseEntity<Map<String, Object>> aiIntegration() {
         boolean available = aiServiceClient.isAvailable();
         return ResponseEntity.ok(Map.of(
-            "ai_service",  "ResQNet AI Service v1.0",
-            "status",      available ? "CONNECTED" : "UNAVAILABLE",
-            "url",         "http://localhost:8084",
-            "models",      java.util.List.of("severity_predictor","dispatch_scorer","demand_forecaster","anomaly_detector"),
-            "integration", "Java Spring Boot -> Python FastAPI"
+                "ai_service",  "ResQNet AI Service v1.0",
+                "status",      available ? "CONNECTED" : "UNAVAILABLE",
+                "url",         "http://localhost:8084",
+                "models",      List.of("severity_predictor","dispatch_scorer","demand_forecaster","anomaly_detector"),
+                "integration", "Java Spring Boot -> Python FastAPI"
         ));
     }
 }

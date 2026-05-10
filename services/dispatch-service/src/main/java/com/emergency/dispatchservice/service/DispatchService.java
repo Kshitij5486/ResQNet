@@ -1,5 +1,6 @@
 package com.emergency.dispatchservice.service;
 
+import com.emergency.dispatchservice.ai.AiServiceClient;
 import com.emergency.dispatchservice.dto.ResponderResponse;
 import com.emergency.dispatchservice.dto.UpdateLocationRequest;
 import com.emergency.dispatchservice.entity.Responder;
@@ -10,9 +11,6 @@ import com.emergency.dispatchservice.repository.ResponderRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import com.emergency.dispatchservice.ai.AiServiceClient;
-import com.emergency.dispatchservice.ai.AiDispatchResponse;
-import java.time.LocalDateTime;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
@@ -28,15 +26,16 @@ public class DispatchService {
     private static final Logger log = LoggerFactory.getLogger(DispatchService.class);
     private static final double EARTH_RADIUS_KM = 6371.0;
 
-    private final ResponderRepository responderRepository;
-    private final AiServiceClient aiServiceClient;
+    private final ResponderRepository  responderRepository;
+    private final AiServiceClient      aiServiceClient;
     private final DispatchEventPublisher eventPublisher;
 
     public DispatchService(ResponderRepository responderRepository,
+                           AiServiceClient aiServiceClient,
                            DispatchEventPublisher eventPublisher) {
         this.responderRepository = responderRepository;
         this.aiServiceClient     = aiServiceClient;
-        this.eventPublisher = eventPublisher;
+        this.eventPublisher      = eventPublisher;
     }
 
     @Transactional
@@ -62,7 +61,7 @@ public class DispatchService {
                     event.getLatitude(), event.getLongitude(),
                     responder.getLatitude(), responder.getLongitude());
 
-            log.info("Assigning responder {} ({}) to incident {} distance: {} km",
+            log.info("Assigning responder {} ({}) to incident {} distance: {}km",
                     responder.getName(), responder.getType(),
                     event.getIncidentId(), String.format("%.2f", distance));
 
@@ -108,7 +107,6 @@ public class DispatchService {
                 id.toString(), request.latitude(), request.longitude(), Instant.now());
         Responder responder = responderRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Responder not found: " + id));
-        log.info("Location updated for responder {}: {}, {}", id, request.latitude(), request.longitude());
         return toResponse(responder);
     }
 
@@ -118,7 +116,6 @@ public class DispatchService {
                 id.toString(), request.latitude(), request.longitude(), Instant.now());
         Responder responder = responderRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Responder not found: " + id));
-        log.debug("Ping from responder {}: lat={}, lon={}", id, request.latitude(), request.longitude());
         return toResponse(responder);
     }
 
@@ -133,9 +130,9 @@ public class DispatchService {
     public double haversineDistance(double lat1, double lon1, double lat2, double lon2) {
         double dLat = Math.toRadians(lat2 - lat1);
         double dLon = Math.toRadians(lon2 - lon1);
-        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
-                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
-                * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        double a    = Math.sin(dLat/2) * Math.sin(dLat/2)
+                    + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
+                    * Math.sin(dLon/2) * Math.sin(dLon/2);
         return EARTH_RADIUS_KM * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     }
 }
