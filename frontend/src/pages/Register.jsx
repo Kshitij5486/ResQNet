@@ -1,130 +1,157 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { Shield, Mail, Lock, User, Phone, Eye, EyeOff, AlertCircle } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { useMutation } from '@tanstack/react-query'
+import { motion } from 'framer-motion'
+import { Siren, Eye, EyeOff, UserPlus } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../api/axios'
+import { WebGLShader } from '../components/ui/WebGLShader'
+import { LiquidButton } from '../components/ui/LiquidButton'
 
 export default function Register() {
-  const [form, setForm] = useState({ fullName: '', email: '', password: '', phoneNumber: '' })
-  const [showPassword, setShowPassword] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [form, setForm] = useState({ fullName:'', email:'', password:'', confirm:'' })
+  const [showPass, setShowPass] = useState(false)
   const navigate = useNavigate()
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    setError('')
-    setLoading(true)
-    try {
-      await api.post('/api/auth/register', form)
-      toast.success('Account created! Please sign in.')
+  const mutation = useMutation({
+    mutationFn: () => api.post('/api/auth/register', {
+      fullName: form.fullName,
+      email:    form.email,
+      password: form.password,
+    }).then(r => r.data),
+    onSuccess: () => {
+      toast.success('Account created! Please login.')
       navigate('/login')
-    } catch (err) {
-      setError(err.response?.data?.message || 'Registration failed. Please try again.')
-    } finally {
-      setLoading(false)
-    }
+    },
+    onError: () => toast.error('Registration failed'),
+  })
+
+  const handleSubmit = () => {
+    if (!form.fullName || !form.email || !form.password) return toast.error('All fields required')
+    if (form.password !== form.confirm) return toast.error('Passwords do not match')
+    if (form.password.length < 6) return toast.error('Password must be at least 6 characters')
+    mutation.mutate()
   }
 
-  const fields = [
-    { key: 'fullName', label: 'Full Name', icon: User, type: 'text', placeholder: 'Kshitij Srivastava' },
-    { key: 'email', label: 'Email', icon: Mail, type: 'email', placeholder: 'you@example.com' },
-    { key: 'phoneNumber', label: 'Phone Number', icon: Phone, type: 'tel', placeholder: '+91 9876543210' },
-  ]
+  const fadeUp = {
+    hidden:  { opacity:0, y:30 },
+    visible: i => ({ opacity:1, y:0, transition:{ duration:1, delay:0.3+i*0.15, ease:[0.25,0.4,0.25,1] } }),
+  }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-accent opacity-5 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 left-1/4 w-96 h-96 bg-blue-800 opacity-5 rounded-full blur-3xl" />
-      </div>
+    <div className="relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-[#030303]">
+      {/* WebGL background */}
+      <WebGLShader/>
 
-      <div className="w-full max-w-md relative">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-accent bg-opacity-10 border border-accent border-opacity-20 mb-4">
-            <Shield className="w-7 h-7 text-accent" />
+      {/* Dark overlay */}
+      <div className="absolute inset-0 bg-black/50 pointer-events-none z-10"/>
+
+      {/* Content */}
+      <div className="relative z-20 w-full max-w-md px-6">
+
+        {/* Badge */}
+        <motion.div custom={0} variants={fadeUp} initial="hidden" animate="visible"
+          className="flex justify-center mb-6">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/[0.05] border border-white/[0.1]">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"/>
+            <span className="text-xs text-white/60 tracking-wide">ResQNet · Emergency Operations</span>
           </div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">ResQNet</h1>
-          <p className="text-muted text-sm mt-1">Emergency Response Platform</p>
-        </div>
+        </motion.div>
 
-        <div className="bg-card border border-border rounded-2xl p-8 shadow-2xl">
-          <h2 className="text-xl font-semibold text-white mb-1">Create account</h2>
-          <p className="text-muted text-sm mb-6">Join the emergency response network</p>
+        {/* Title */}
+        <motion.div custom={1} variants={fadeUp} initial="hidden" animate="visible"
+          className="text-center mb-8">
+          <h1 className="text-4xl font-black tracking-tight mb-2">
+            <span className="bg-clip-text text-transparent bg-gradient-to-b from-white to-white/80">Create Your</span>
+            <br/>
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-300 via-white/90 to-rose-300">Operator Account</span>
+          </h1>
+          <p className="text-white/40 text-sm">Join the emergency response network</p>
+        </motion.div>
 
-          {error && (
-            <div className="flex items-center gap-2 bg-danger bg-opacity-10 border border-danger border-opacity-20 rounded-lg px-4 py-3 mb-5">
-              <AlertCircle className="w-4 h-4 text-danger flex-shrink-0" />
-              <p className="text-danger text-sm">{error}</p>
+        {/* Form card */}
+        <motion.div custom={2} variants={fadeUp} initial="hidden" animate="visible">
+          <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl p-8 backdrop-blur-sm">
+
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center">
+                <UserPlus className="w-5 h-5 text-white"/>
+              </div>
+              <div>
+                <p className="text-white font-bold text-sm">New Operator</p>
+                <p className="text-white/40 text-xs">Emergency Operations Center</p>
+              </div>
             </div>
-          )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {fields.map(({ key, label, icon: Icon, type, placeholder }) => (
-              <div key={key}>
-                <label className="block text-sm font-medium text-slate-300 mb-1.5">{label}</label>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-white/40 uppercase tracking-widest mb-2">Full Name</label>
+                <input value={form.fullName} onChange={e=>setForm({...form,fullName:e.target.value})}
+                  placeholder="Kshitij Dev"
+                  className="w-full bg-white/[0.05] border border-white/[0.1] rounded-xl px-4 py-3 text-white placeholder-white/20 text-sm focus:outline-none focus:border-indigo-500/60 transition-colors"/>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-white/40 uppercase tracking-widest mb-2">Email</label>
+                <input type="email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})}
+                  placeholder="operator@resqnet.com"
+                  className="w-full bg-white/[0.05] border border-white/[0.1] rounded-xl px-4 py-3 text-white placeholder-white/20 text-sm focus:outline-none focus:border-indigo-500/60 transition-colors"/>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-white/40 uppercase tracking-widest mb-2">Password</label>
                 <div className="relative">
-                  <Icon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
-                  <input
-                    type={type}
-                    value={form[key]}
-                    onChange={(e) => setForm({ ...form, [key]: e.target.value })}
-                    placeholder={placeholder}
-                    required
-                    className="w-full bg-subtle border border-border rounded-lg pl-10 pr-4 py-2.5 text-white placeholder-muted text-sm focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-colors"
-                  />
+                  <input type={showPass?'text':'password'} value={form.password}
+                    onChange={e=>setForm({...form,password:e.target.value})}
+                    placeholder="Min 6 characters"
+                    className="w-full bg-white/[0.05] border border-white/[0.1] rounded-xl px-4 py-3 text-white placeholder-white/20 text-sm focus:outline-none focus:border-indigo-500/60 transition-colors pr-11"/>
+                  <button onClick={()=>setShowPass(!showPass)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white transition-colors">
+                    {showPass ? <EyeOff className="w-4 h-4"/> : <Eye className="w-4 h-4"/>}
+                  </button>
                 </div>
               </div>
-            ))}
 
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">Password</label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={form.password}
-                  onChange={(e) => setForm({ ...form, password: e.target.value })}
-                  placeholder="••••••••"
-                  required
-                  className="w-full bg-subtle border border-border rounded-lg pl-10 pr-10 py-2.5 text-white placeholder-muted text-sm focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-colors"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-white transition-colors"
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
+              <div>
+                <label className="block text-xs font-bold text-white/40 uppercase tracking-widest mb-2">Confirm Password</label>
+                <input type="password" value={form.confirm}
+                  onChange={e=>setForm({...form,confirm:e.target.value})}
+                  onKeyDown={e=>e.key==='Enter'&&handleSubmit()}
+                  placeholder="Repeat password"
+                  className="w-full bg-white/[0.05] border border-white/[0.1] rounded-xl px-4 py-3 text-white placeholder-white/20 text-sm focus:outline-none focus:border-indigo-500/60 transition-colors"/>
+              </div>
+
+              {/* Liquid glass button */}
+              <div className="flex justify-center pt-2">
+                <LiquidButton
+                  onClick={handleSubmit}
+                  disabled={mutation.isPending}
+                  className="text-white border border-white/20 rounded-full w-full"
+                  size="xl">
+                  {mutation.isPending
+                    ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"/>Creating account...</>
+                    : <><UserPlus className="w-4 h-4"/>Create Operator Account</>
+                  }
+                </LiquidButton>
               </div>
             </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-accent hover:bg-accent-hover text-white font-medium py-2.5 rounded-lg transition-colors mt-2 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
-              {loading ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Creating account...
-                </>
-              ) : 'Create account'}
-            </button>
-          </form>
+            <div className="mt-5 text-center">
+              <p className="text-white/20 text-xs">
+                Already have an account?{' '}
+                <button onClick={()=>navigate('/login')} className="text-indigo-400 hover:text-indigo-300 transition-colors">
+                  Sign in
+                </button>
+              </p>
+            </div>
+          </div>
 
-          <p className="text-center text-sm text-muted mt-6">
-            Already have an account?{' '}
-            <Link to="/login" className="text-accent hover:text-accent-hover font-medium transition-colors">
-              Sign in
-            </Link>
-          </p>
-        </div>
-
-        <p className="text-center text-xs text-muted mt-6">
-          ResQNet v1.0.0 — Distributed Emergency Response System
-        </p>
+          <p className="text-center text-white/10 text-xs mt-4">ResQNet v1.0 · All 5 Sprints Complete</p>
+        </motion.div>
       </div>
+
+      {/* Gradient overlays */}
+      <div className="absolute inset-0 bg-gradient-to-t from-[#030303] via-transparent to-[#030303]/60 pointer-events-none z-10"/>
     </div>
   )
 }
